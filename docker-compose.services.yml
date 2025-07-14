@@ -1,0 +1,63 @@
+services:
+  # Base de données PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: notecibolt_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: notecibolt_db
+      POSTGRES_USER: notecibolt_user
+      POSTGRES_PASSWORD: notecibolt_password
+    ports:
+      - "5433:5432"  # Port différent pour éviter les conflits
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - notecibolt_network
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    container_name: notecibolt_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"  # Port différent au cas où Redis serait aussi en cours d'exécution
+    volumes:
+      - redis_data:/data
+    networks:
+      - notecibolt_network
+
+  # Serveur de développement pour les emails (MailHog)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: notecibolt_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Interface web
+    networks:
+      - notecibolt_network
+
+  # Adminer pour la gestion de la base de données
+  adminer:
+    image: adminer:latest
+    container_name: notecibolt_adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    networks:
+      - notecibolt_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  notecibolt_network:
+    driver: bridge

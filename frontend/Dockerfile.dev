@@ -1,0 +1,23 @@
+# Dockerfile de développement pour le frontend
+FROM node:18-alpine
+
+# Installer git pour les dépendances
+RUN apk add --no-cache git
+
+# Créer le répertoire de l'application
+WORKDIR /app
+
+# Copier les fichiers package.json (s'ils existent)
+COPY package*.json* ./
+
+# Installer les dépendances si package.json existe
+RUN if [ -f package.json ]; then npm install; fi
+
+# Copier le reste du code
+COPY . .
+
+# Exposer le port Vite
+EXPOSE 5173
+
+# Commande par défaut
+CMD ["sh", "-c", "if [ ! -f package.json ]; then npm create vite@latest . -- --template react-ts && npm install; fi && npm run dev -- --host 0.0.0.0"]

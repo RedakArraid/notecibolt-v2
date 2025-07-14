@@ -1,0 +1,20 @@
+# Dockerfile de développement pour le backend
+FROM node:18-alpine
+
+# Installer les dépendances système
+RUN apk add --no-cache python3 make g++ openssl
+
+# Créer le répertoire de l'application
+WORKDIR /app
+
+# Installer nodemon globalement pour le développement
+RUN npm install -g nodemon
+
+# Exposer le port
+EXPOSE 3001
+
+# Volume pour le code source (sera monté depuis l'hôte)
+VOLUME ["/app"]
+
+# Commande par défaut
+CMD ["sh", "-c", "npm install && npx prisma generate && npm run dev"]
