@@ -4,7 +4,8 @@
   "description": "Backend API pour le système de gestion scolaire NoteCibolt",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "node src/server.js",
+    "dev": "ts-node -r tsconfig-paths/register src/app.ts",
+    "dev:watch": "nodemon --watch src --ext ts --exec ts-node -r tsconfig-paths/register src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
     "test": "jest",
@@ -50,7 +51,6 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "socket.io": "^4.7.4",
-    "tsconfig-paths": "^4.2.0",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },
@@ -78,6 +78,7 @@
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.2.2"
   },
   "engines": {

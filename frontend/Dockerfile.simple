@@ -1,0 +1,30 @@
+# Dockerfile simplifié pour diagnostic
+FROM node:18-alpine
+
+# Installer git pour les dépendances npm
+RUN apk add --no-cache git
+
+# Créer le répertoire de l'application
+WORKDIR /app
+
+# Méthode alternative : copier tout d'abord puis installer
+COPY . .
+
+# Supprimer node_modules local s'il existe
+RUN rm -rf node_modules package-lock.json
+
+# Installer les dépendances avec logs verbeux
+RUN npm cache clean --force
+RUN npm install --loglevel verbose
+
+# Vérifier l'installation
+RUN echo "=== VÉRIFICATION FINALE ===" && \
+    npm list --depth=0 && \
+    echo "=== TAILWINDCSS SPÉCIFIQUEMENT ===" && \
+    npm list tailwindcss
+
+# Exposer le port Vite
+EXPOSE 5173
+
+# Commande de démarrage
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

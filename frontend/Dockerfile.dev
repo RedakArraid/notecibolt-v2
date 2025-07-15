@@ -1,23 +1,57 @@
-# Dockerfile de développement pour le frontend
+# Dockerfile de développement pour le frontend NoteCibolt v2 - Version DEBUG
 FROM node:18-alpine
 
-# Installer git pour les dépendances
+# Installer git pour les dépendances npm
 RUN apk add --no-cache git
 
 # Créer le répertoire de l'application
 WORKDIR /app
 
-# Copier les fichiers package.json (s'ils existent)
-COPY package*.json* ./
+# Debug: Afficher la version de Node et npm
+RUN echo "Node version:" && node --version && echo "NPM version:" && npm --version
 
-# Installer les dépendances si package.json existe
-RUN if [ -f package.json ]; then npm install; fi
+# Copier et vérifier package.json
+COPY package.json ./
+RUN echo "=== CONTENU DE PACKAGE.JSON ===" && cat package.json
 
-# Copier le reste du code
-COPY . .
+# Copier package-lock.json s'il existe
+COPY package-lock.json* ./
+
+# Debug: Lister les fichiers copiés
+RUN echo "=== FICHIERS APRÈS COPIE ===" && ls -la
+
+# Nettoyer le cache npm et installer
+RUN npm cache clean --force
+RUN npm install --verbose
+
+# Debug: Vérifier l'installation
+RUN echo "=== VÉRIFICATION INSTALLATION ===" && \
+    ls -la node_modules/ | head -10 && \
+    echo "=== TEST TAILWINDCSS ===" && \
+    npm list tailwindcss && \
+    echo "=== TOUTES LES DÉPENDANCES ===" && \
+    npm list --depth=0
+
+# Copier les fichiers de configuration
+COPY vite.config.ts tsconfig*.json postcss.config.js tailwind.config.js ./
+COPY .env* ./
+COPY index.html ./
+
+# Debug: Vérifier les fichiers de config
+RUN echo "=== FICHIERS DE CONFIG ===" && ls -la *.js *.ts *.json
+
+# Copier les dossiers
+COPY public/ ./public/
+COPY src/ ./src/
+
+# Debug: Vérifier la structure finale
+RUN echo "=== STRUCTURE FINALE ===" && \
+    echo "Racine:" && ls -la && \
+    echo "Source:" && ls -la src/ && \
+    echo "Public:" && ls -la public/
 
 # Exposer le port Vite
 EXPOSE 5173
 
-# Commande par défaut
-CMD ["sh", "-c", "if [ ! -f package.json ]; then npm create vite@latest . -- --template react-ts && npm install; fi && npm run dev -- --host 0.0.0.0"]
+# Commande de démarrage avec debugging complet
+CMD ["sh", "-c", "echo '=== DÉMARRAGE VITE ===' && echo 'Vérification finale des dépendances:' && npm list tailwindcss && echo 'Démarrage du serveur...' && npm run dev -- --host 0.0.0.0"]

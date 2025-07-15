@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++ openssl
 WORKDIR /app
 
 # Installer nodemon globalement pour le développement
-RUN npm install -g nodemon
+RUN npm install -g ts-node typescript nodemon
 
 # Exposer le port
 EXPOSE 3001
@@ -17,4 +17,4 @@ EXPOSE 3001
 VOLUME ["/app"]
 
 # Commande par défaut
-CMD ["sh", "-c", "npm install && npx prisma generate && npm run dev"]
+CMD ["nodemon", "--watch", "src", "--ext", "ts", "--exec", "ts-node", "-r", "tsconfig-paths/register", "src/app.ts"]

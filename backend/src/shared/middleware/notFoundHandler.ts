@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 
-export const notFoundHandler = (req: Request, res: Response): void => {
+export const notFoundHandler = (_req: Request, res: Response): void => {
   res.status(404).json({
     success: false,
-    message: `Route ${req.method} ${req.originalUrl} non trouvée`,
+    message: `Route ${_req.method} ${_req.originalUrl} non trouvée`,
     code: 'ROUTE_NOT_FOUND',
     timestamp: new Date().toISOString(),
     availableEndpoints: {

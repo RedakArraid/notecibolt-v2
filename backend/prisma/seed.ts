@@ -154,17 +154,17 @@ async function main() {
   });
 
   // Créer des achievements
-  const achievement1 = await prisma.achievement.create({
-    data: {
-      title: 'Mathématicien prodige',
-      description: 'Obtenir plus de 17/20 en mathématiques pendant 3 évaluations consécutives',
-      icon: 'Calculator',
-      category: 'ACADEMIC',
-      points: 50,
-      criteria: ['Note > 17/20', 'Trois évaluations consécutives'],
-      rarity: 'RARE'
-    }
-  });
+  // const achievement1 = await prisma.achievement.create({
+  //   data: {
+  //     title: 'Mathématicien prodige',
+  //     description: 'Obtenir plus de 17/20 en mathématiques pendant 3 évaluations consécutives',
+  //     icon: 'Calculator',
+  //     category: 'ACADEMIC',
+  //     points: 50,
+  //     criteria: ['Note > 17/20', 'Trois évaluations consécutives'],
+  //     rarity: 'RARE'
+  //   }
+  // });
 
   // Créer quelques notes
   await prisma.grade.create({

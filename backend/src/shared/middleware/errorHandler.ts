@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 
 export interface ApiError extends Error {
   statusCode?: number;
-  code?: string;
+  code?: string | undefined;
   details?: any;
 }
 
@@ -10,7 +10,7 @@ export const errorHandler = (
   error: ApiError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void => {
   // Log de l'erreur
   console.error('🚨 API Error:', {
@@ -26,7 +26,7 @@ export const errorHandler = (
   // Déterminer le code de statut
   let statusCode = error.statusCode || 500;
   let message = error.message || 'Erreur interne du serveur';
-  let code = error.code || 'INTERNAL_ERROR';
+  let code: string = error.code ?? 'INTERNAL_ERROR';
 
   // Gestion des erreurs spécifiques
   
@@ -135,7 +135,7 @@ export const errorHandler = (
 export const createError = (
   statusCode: number,
   message: string,
-  code?: string,
+  code?: string | undefined,
   details?: any
 ): ApiError => {
   const error = new Error(message) as ApiError;

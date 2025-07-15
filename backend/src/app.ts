@@ -29,6 +29,7 @@ import reportRoutes from './modules/reports/routes';
 import resourceRoutes from './modules/resources/routes';
 import virtualClassRoutes from './modules/virtual-classes/routes';
 import notificationRoutes from './modules/notifications/routes';
+import adminRoutes from './modules/admin/routes';
 
 const app = express();
 
@@ -86,7 +87,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Headers de réponse personnalisés
-app.use((req, res, next) => {
+app.use((_req, res, next) => {
   res.setHeader('X-API-Version', config.apiVersion);
   res.setHeader('X-School-Name', config.schoolName);
   next();
@@ -97,7 +98,18 @@ app.use((req, res, next) => {
 // ===========================
 
 // Health check
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    version: config.apiVersion,
+    environment: config.nodeEnv,
+    school: config.schoolName,
+  });
+});
+
+// Health check API versionné (public)
+app.get('/api/v1/health', (_req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -108,7 +120,7 @@ app.get('/health', (req, res) => {
 });
 
 // Documentation API
-app.get('/api/docs', (req, res) => {
+app.get('/api/docs', (_req, res) => {
   res.json({
     message: 'Documentation API NoteCibolt',
     version: config.apiVersion,
@@ -168,6 +180,7 @@ apiRouter.use('/reports', reportRoutes);
 apiRouter.use('/resources', resourceRoutes);
 apiRouter.use('/virtual-classes', virtualClassRoutes);
 apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/admin', adminRoutes);
 
 // Monter le router API
 app.use(`/api/${config.apiVersion}`, apiRouter);

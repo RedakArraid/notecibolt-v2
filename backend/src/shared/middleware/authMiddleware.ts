@@ -135,9 +135,9 @@ export const requireRole = (roles: string | string[]) => {
 
 // Middleware pour vérifier si l'utilisateur peut accéder à une ressource spécifique
 export const requireOwnershipOrRole = (roles: string | string[]) => {
-  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+  return (req: AuthRequest, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({
+      _res.status(401).json({
         success: false,
         message: 'Authentification requise',
         code: 'AUTHENTICATION_REQUIRED'
@@ -154,7 +154,7 @@ export const requireOwnershipOrRole = (roles: string | string[]) => {
       return;
     }
 
-    res.status(403).json({
+    _res.status(403).json({
       success: false,
       message: 'Accès non autorisé à cette ressource',
       code: 'ACCESS_DENIED'
@@ -165,7 +165,7 @@ export const requireOwnershipOrRole = (roles: string | string[]) => {
 // Middleware optionnel d'authentification (ne bloque pas si pas de token)
 export const optionalAuth = async (
   req: AuthRequest,
-  res: Response,
+  //res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
