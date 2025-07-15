@@ -1,25 +1,50 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { Layout } from '../components/Layout/Layout';
 import { EnhancedLoginPage } from '../components/Auth/EnhancedLoginPage';
-import { AdminDashboard } from '../components/Admin/AdminDashboard';
-import { TeacherDashboard } from '../components/Teacher/TeacherDashboard';
-import { ParentDashboard } from '../components/Parent/ParentDashboard';
-import { SupervisorDashboard } from '../components/Supervisor/SupervisorDashboard';
-import { StudentDashboard } from '../components/Dashboard/StudentDashboard';
+import { ErrorBoundary } from '../components/Error/ErrorBoundary';
+import { PageLoading, DashboardSkeleton } from '../components/Loading/LoadingComponents';
 import { ProtectedRoute, RoleBasedRedirect } from './ProtectedRoute';
 
-// Composant pour le dashboard étudiant (utilise les composants existants)
-const StudentDashboardWrapper: React.FC = () => {
-  return <StudentDashboard />;
+// Lazy loading des dashboards avec ErrorBoundary
+import {
+  AdminDashboard,
+  TeacherDashboard,
+  ParentDashboard,
+  SupervisorDashboard,
+  StudentDashboard
+} from '../utils/lazyComponents';
+
+// Composants fallback pour les modules non implémentés
+import { ComingSoon } from '../components/Fallback/ComingSoon';
+
+// Création des composants fallback pour le router
+const MessageComingSoon = () => <ComingSoon moduleName="Système de Messagerie" expectedPhase={7} />;
+const StudentManagementComingSoon = () => <ComingSoon moduleName="Gestion des Élèves" expectedPhase={7} />;
+const AttendanceComingSoon = () => <ComingSoon moduleName="Gestion des Présences" expectedPhase={7} />;
+const ScheduleComingSoon = () => <ComingSoon moduleName="Emploi du Temps" expectedPhase={7} />;
+const FinanceComingSoon = () => <ComingSoon moduleName="Gestion Financière" expectedPhase={8} />;
+const ReportsComingSoon = () => <ComingSoon moduleName="Rapports et Analytiques" expectedPhase={8} />;
+
+// Wrapper avec Error Boundary et Suspense pour tous les dashboards
+const DashboardWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<DashboardSkeleton />}>
+        {children}
+      </Suspense>
+    </ErrorBoundary>
+  );
 };
 
 // Composant de layout principal avec Sidebar et Header
 const AppLayout: React.FC = () => {
   return (
-    <Layout>
-      <Outlet />
-    </Layout>
+    <ErrorBoundary>
+      <Layout>
+        <Outlet />
+      </Layout>
+    </ErrorBoundary>
   );
 };
 
@@ -42,7 +67,9 @@ const router = createBrowserRouter([
         path: '/admin',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
-            <AdminDashboard />
+            <DashboardWrapper>
+              <AdminDashboard />
+            </DashboardWrapper>
           </ProtectedRoute>
         )
       },
@@ -50,14 +77,9 @@ const router = createBrowserRouter([
         path: '/admin/students',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion des élèves</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de gestion des élèves - À implémenter en Phase 7
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <StudentManagementComingSoon />
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -65,14 +87,16 @@ const router = createBrowserRouter([
         path: '/admin/teachers',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion des enseignants</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de gestion des enseignants - À implémenter en Phase 7
-                </p>
+            <ErrorBoundary>
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Gestion des enseignants</h1>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Module de gestion des enseignants - À implémenter en Phase 7
+                  </p>
+                </div>
               </div>
-            </div>
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -95,14 +119,9 @@ const router = createBrowserRouter([
         path: '/admin/reports',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Rapports et analytiques</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de rapports - À implémenter en Phase 8
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <ReportsComingSoon />
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -112,7 +131,9 @@ const router = createBrowserRouter([
         path: '/teacher',
         element: (
           <ProtectedRoute allowedRoles={['teacher']}>
-            <TeacherDashboard />
+            <DashboardWrapper>
+              <TeacherDashboard />
+            </DashboardWrapper>
           </ProtectedRoute>
         )
       },
@@ -120,14 +141,16 @@ const router = createBrowserRouter([
         path: '/teacher/grades',
         element: (
           <ProtectedRoute allowedRoles={['teacher']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion des notes</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de saisie et gestion des notes - À implémenter en Phase 7
-                </p>
+            <ErrorBoundary>
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Gestion des notes</h1>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Module de saisie et gestion des notes - À implémenter en Phase 7
+                  </p>
+                </div>
               </div>
-            </div>
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -135,14 +158,16 @@ const router = createBrowserRouter([
         path: '/teacher/assignments',
         element: (
           <ProtectedRoute allowedRoles={['teacher']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion des devoirs</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de création et gestion des devoirs - À implémenter en Phase 7
-                </p>
+            <ErrorBoundary>
+              <div className="p-6">
+                <h1 className="text-2xl font-bold mb-4">Gestion des devoirs</h1>
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Module de création et gestion des devoirs - À implémenter en Phase 7
+                  </p>
+                </div>
               </div>
-            </div>
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -150,14 +175,9 @@ const router = createBrowserRouter([
         path: '/teacher/attendance',
         element: (
           <ProtectedRoute allowedRoles={['teacher']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion des présences</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de prise de présences - À implémenter en Phase 7
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <AttendanceComingSoon />
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -165,14 +185,9 @@ const router = createBrowserRouter([
         path: '/teacher/schedule',
         element: (
           <ProtectedRoute allowedRoles={['teacher']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Emploi du temps</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module d'emploi du temps - À implémenter en Phase 7
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <ScheduleComingSoon />
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -182,7 +197,9 @@ const router = createBrowserRouter([
         path: '/student',
         element: (
           <ProtectedRoute allowedRoles={['student']}>
-            <StudentDashboardWrapper />
+            <DashboardWrapper>
+              <StudentDashboard />
+            </DashboardWrapper>
           </ProtectedRoute>
         )
       },
@@ -252,7 +269,9 @@ const router = createBrowserRouter([
         path: '/parent',
         element: (
           <ProtectedRoute allowedRoles={['parent']}>
-            <ParentDashboard />
+            <DashboardWrapper>
+              <ParentDashboard />
+            </DashboardWrapper>
           </ProtectedRoute>
         )
       },
@@ -307,7 +326,9 @@ const router = createBrowserRouter([
         path: '/supervisor',
         element: (
           <ProtectedRoute allowedRoles={['supervisor']}>
-            <SupervisorDashboard />
+            <DashboardWrapper>
+              <SupervisorDashboard />
+            </DashboardWrapper>
           </ProtectedRoute>
         )
       },
@@ -347,14 +368,9 @@ const router = createBrowserRouter([
         path: '/messages',
         element: (
           <ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'parent', 'supervisor']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Messages</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Système de messagerie interne - À implémenter en Phase 7
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <MessageComingSoon />
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
