@@ -50,6 +50,13 @@ class ApiService {
   async delete(endpoint: string) {
     return this.makeRequest(endpoint, { method: 'DELETE' });
   }
+
+  async patch(endpoint: string, data: any) {
+    return this.makeRequest(endpoint, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiService = new ApiService();

@@ -65,22 +65,14 @@ async function main() {
   // ===========================
   
   const classNames = [
-    'CP-A', 'CP-B', 'CE1-A', 'CE1-B', 'CE2-A', 'CE2-B', 
-    'CM1-A', 'CM1-B', 'CM2-A', 'CM2-B',
-    '6ème-A', '6ème-B', '5ème-A', '5ème-B', '4ème-A', '4ème-B', 
-    '3ème-A', '3ème-B', '2nde-A', '2nde-B', '1ère-A', '1ère-B', 
-    'Terminale-A', 'Terminale-B', 'Terminale-C', 'Terminale-D',
-    'BTS-1', 'BTS-2'
+    'CP-A', 'CP-B', 'CE1-A', 'CE1-B', 'CE2-A', 'CE2-B',
+    'CM1-A', 'CM1-B', 'CM2-A', 'CM2-B'
   ];
 
   const classes = [];
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 10; i++) {
     const className = classNames[i] || `Classe-${i + 1}`;
-    const level = className.includes('CP') || className.includes('CE') || className.includes('CM') ? 'Primaire' :
-                  className.includes('6ème') || className.includes('5ème') || className.includes('4ème') || className.includes('3ème') ? 'Collège' :
-                  className.includes('2nde') || className.includes('1ère') || className.includes('Terminale') ? 'Lycée' :
-                  'Supérieur';
-
+    const level = className.includes('CP') || className.includes('CE') || className.includes('CM') ? 'Primaire' : 'Collège';
     const classRecord = await prisma.class.create({
       data: {
         name: className,
@@ -149,17 +141,12 @@ async function main() {
     'M. Dupont', 'Mme Dubois', 'M. Martin', 'Mme Bernard', 'M. Moreau',
     'Mme Petit', 'M. Durand', 'Mme Leroy', 'M. Girard', 'Mme Fournier',
     'M. Bonnet', 'Mme Mercier', 'M. Boyer', 'Mme Blanchard', 'M. Joly',
-    'Mme Garnier', 'M. Faure', 'Mme Lemaire', 'M. Bertrand', 'Mme Simon',
-    'M. Laurent', 'Mme Michel', 'M. Lefebvre', 'Mme Lecomte', 'M. Roux',
-    'Mme Legrand', 'M. Morel', 'Mme Nicolas', 'M. Olivier', 'Mme Picard',
-    'M. Henry', 'Mme Rousseau', 'M. Gauthier', 'Mme Dumont', 'M. Lopez',
-    'Mme Fontaine', 'M. Chevalier', 'Mme Robin', 'M. Masson', 'Mme Sanchez',
-    'M. Muller', 'Mme Laurent', 'M. Andre', 'Mme Leroux', 'M. Leclerc'
+    'Mme Garnier', 'M. Faure', 'Mme Lemaire', 'M. Bertrand', 'Mme Simon'
   ];
 
   const departments = ['Sciences', 'Lettres', 'Langues', 'Arts & Sports'];
 
-  for (let i = 0; i < 45; i++) {
+  for (let i = 0; i < 20; i++) {
     const teacherUser = await prisma.user.create({
       data: {
         email: `teacher${i + 1}@notecibolt.com`,
@@ -192,7 +179,7 @@ async function main() {
   const parents = [];
   const occupations = ['Ingénieur', 'Médecin', 'Enseignant', 'Commerçant', 'Fonctionnaire'];
   
-  for (let i = 0; i < 400; i++) {
+  for (let i = 0; i < 50; i++) {
     const parentUser = await prisma.user.create({
       data: {
         email: `parent${i + 1}@notecibolt.com`,
@@ -228,7 +215,7 @@ async function main() {
     'Lamine Ndour', 'Coumba Seck', 'Bamba Niang', 'Dieynaba Tall', 'Serigne Mboup'
   ];
 
-  for (let i = 0; i < 856; i++) {
+  for (let i = 0; i < 100; i++) {
     const studentUser = await prisma.user.create({
       data: {
         email: `student${i + 1}@notecibolt.com`,

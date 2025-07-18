@@ -94,7 +94,6 @@ export const useStudents = (autoLoad = true): [UseStudentsState, UseStudentsActi
     
     try {
       const result = await studentsService.getStudents(page, 20, filters);
-      
       setState(prev => ({
         ...prev,
         students: result.students,
@@ -108,10 +107,8 @@ export const useStudents = (autoLoad = true): [UseStudentsState, UseStudentsActi
       }));
     } catch (error: any) {
       console.error('Erreur lors du chargement des étudiants:', error);
-      
       // Fallback vers les données mockées si API indisponible
       const mockStudents = await loadMockStudents();
-      
       setState(prev => ({
         ...prev,
         students: mockStudents,

@@ -2,10 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { User, Search, Plus, Filter, MoreVertical, Phone, Mail, MapPin, RefreshCw, AlertCircle, CheckCircle, Users, GraduationCap, UserCheck, Activity } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { Student } from '../../types/api';
+import { StudentDetails } from './StudentDetails';
 
 interface StudentManagementProps {
   onStudentSelect?: (student: Student) => void;
 }
+
+// Modal générique simple (à extraire si besoin)
+const Modal: React.FC<{ open: boolean; onClose: () => void; title: string; children: React.ReactNode }> = ({ open, onClose, title, children }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-lg p-6 relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl">×</button>
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{title}</h3>
+        {children}
+      </div>
+    </div>
+  );
+};
 
 export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentSelect }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,12 +28,25 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
   const [selectedClassFilter, setSelectedClassFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; email: string; classId: string; isActive: boolean }>({ name: '', email: '', classId: '', isActive: true });
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [editSuccess, setEditSuccess] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Utilisation du hook useStudents pour gérer l'état et les données
   const [studentsState, studentsActions] = useStudents(true);
 
   const {
-    students,
+    students = [],
     stats,
     loading,
     loadingStats,
@@ -58,14 +86,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
   useEffect(() => {
     const delayedLoad = setTimeout(() => {
       const filters = {
-        search: searchTerm || undefined,
+        search: searchTerm?.trim() || undefined,
         isActive: selectedFilter === 'active' ? true : selectedFilter === 'inactive' ? false : undefined,
         classId: selectedClassFilter !== 'all' ? selectedClassFilter : undefined,
         sortBy: 'name' as const,
         sortOrder: 'asc' as const
       };
 
-      console.log('🔄 Loading students with filters:', filters, 'page:', currentPage);
       loadStudents(currentPage, filters);
     }, 300); // Debounce de 300ms pour éviter trop d'appels
 
@@ -90,6 +117,110 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
   const handleClassFilterChange = (classId: string) => {
     setSelectedClassFilter(classId);
     setCurrentPage(1);
+  };
+
+  const handleEdit = (student: Student) => {
+    setStudentToEdit(student);
+    setEditForm({
+      name: student.name,
+      email: student.email,
+      classId: student.class?.id || '',
+      isActive: student.isActive ?? true
+    });
+    setEditError(null);
+    setEditSuccess(null);
+    setEditModalOpen(true);
+  };
+  const handleDelete = (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+    setDeleteModalOpen(true);
+  };
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setStudentToEdit(null);
+    setEditError(null);
+    setEditSuccess(null);
+  };
+  const closeDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setStudentToDelete(null);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+  };
+
+  // Soumission édition
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentToEdit) return;
+    setEditLoading(true);
+    setEditError(null);
+    setEditSuccess(null);
+    try {
+      const updated = await studentsActions.updateStudent(studentToEdit.id, {
+        name: editForm.name,
+        email: editForm.email,
+        classId: editForm.classId,
+        isActive: editForm.isActive
+      });
+      setEditSuccess("Élève modifié avec succès");
+      setTimeout(() => {
+        setEditModalOpen(false);
+        setStudentToEdit(null);
+        setEditSuccess(null);
+      }, 1000);
+    } catch (err: any) {
+      setEditError(err?.response?.data?.message || 'Erreur lors de la modification');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Soumission suppression
+  const handleDeleteConfirm = async () => {
+    if (!studentToDelete) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    setDeleteSuccess(null);
+    try {
+      await studentsActions.deleteStudent(studentToDelete.id);
+      setDeleteSuccess("Élève archivé avec succès");
+      setTimeout(() => {
+        setDeleteModalOpen(false);
+        setStudentToDelete(null);
+        setDeleteSuccess(null);
+      }, 1000);
+    } catch (err: any) {
+      setDeleteError(err?.response?.data?.message || 'Erreur lors de la suppression');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Ouvre la fiche détaillée au clic sur un élève
+  const handleRowClick = (student: Student) => {
+    setSelectedStudent(student);
+  };
+
+  // Callback de modification depuis la fiche
+  const handleDetailsUpdate = async (updated: Partial<Student>) => {
+    if (!selectedStudent) return;
+    setDetailsLoading(true);
+    await studentsActions.updateStudent(selectedStudent.id, updated);
+    setDetailsLoading(false);
+    await refreshData();
+    setSelectedStudent(null);
+  };
+
+  // Callback d'archivage depuis la fiche
+  const handleDetailsArchive = async () => {
+    if (!selectedStudent) return;
+    setDetailsLoading(true);
+    await studentsActions.deleteStudent(selectedStudent.id);
+    setDetailsLoading(false);
+    await refreshData();
+    setSelectedStudent(null);
   };
 
   const getRoleColor = (role: string) => {
@@ -340,7 +471,7 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
                     <tr 
                       key={student.id} 
                       className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-                      onClick={() => onStudentSelect?.(student)}
+                      onClick={() => handleRowClick(student)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
@@ -430,9 +561,13 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
                           {student.isActive ? 'Actif' : 'Inactif'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                          <MoreVertical className="w-4 h-4" />
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2 justify-end">
+                        <button
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Modifier"
+                          onClick={e => { e.stopPropagation(); handleEdit(student); }}
+                        >
+                          <svg className="w-4 h-4 inline" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 019 17H7v-2a2 2 0 012-2z" /></svg>
                         </button>
                       </td>
                     </tr>
@@ -473,6 +608,68 @@ export const StudentManagement: React.FC<StudentManagementProps> = ({ onStudentS
           </>
         )}
       </div>
+
+      {/* Modale d'édition */}
+      <Modal open={editModalOpen} onClose={closeEditModal} title="Modifier l'élève">
+        {studentToEdit && (
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom</label>
+              <input type="text" className="w-full border rounded px-3 py-2" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <input type="email" className="w-full border rounded px-3 py-2" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Classe</label>
+              <select className="w-full border rounded px-3 py-2" value={editForm.classId} onChange={e => setEditForm(f => ({ ...f, classId: e.target.value }))}>
+                <option value="">Non assigné</option>
+                {availableClasses.map(cls => (
+                  <option key={cls.id} value={cls.id}>{cls.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Statut</label>
+              <select className="w-full border rounded px-3 py-2" value={editForm.isActive ? 'active' : 'inactive'} onChange={e => setEditForm(f => ({ ...f, isActive: e.target.value === 'active' }))}>
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+              </select>
+            </div>
+            {editError && <div className="text-red-600 text-sm">{editError}</div>}
+            {editSuccess && <div className="text-green-600 text-sm">{editSuccess}</div>}
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 bg-gray-200 rounded" type="button" onClick={closeEditModal} disabled={editLoading}>Annuler</button>
+              <button className="px-4 py-2 bg-blue-600 text-white rounded" type="submit" disabled={editLoading}>{editLoading ? 'Enregistrement...' : 'Enregistrer'}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+      {/* Modale de confirmation suppression */}
+      <Modal open={deleteModalOpen} onClose={closeDeleteModal} title="Confirmer la suppression">
+        {studentToDelete && (
+          <div>
+            <p className="mb-4">Voulez-vous vraiment archiver l'élève <span className="font-semibold">{studentToDelete.name}</span> ?</p>
+            {deleteError && <div className="text-red-600 text-sm mb-2">{deleteError}</div>}
+            {deleteSuccess && <div className="text-green-600 text-sm mb-2">{deleteSuccess}</div>}
+            <div className="flex justify-end gap-2">
+              <button className="px-4 py-2 bg-gray-200 rounded" onClick={closeDeleteModal} disabled={deleteLoading}>Annuler</button>
+              <button className="px-4 py-2 bg-red-600 text-white rounded" onClick={handleDeleteConfirm} disabled={deleteLoading}>{deleteLoading ? 'Suppression...' : 'Supprimer'}</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+      {/* Fiche élève détaillée */}
+      {selectedStudent && (
+        <StudentDetails
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          onUpdate={handleDetailsUpdate}
+          onArchive={handleDetailsArchive}
+          loading={detailsLoading}
+        />
+      )}
     </div>
   );
 };
