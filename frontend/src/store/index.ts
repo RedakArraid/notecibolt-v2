@@ -36,6 +36,15 @@ interface AppState {
   apiConnected: boolean | null;
   setApiConnected: (connected: boolean | null) => void;
   
+  // Messages state
+  readMessages: Set<string>;
+  markMessageAsRead: (messageId: string) => void;
+  isMessageRead: (messageId: string) => boolean;
+  
+  // Dashboard refresh trigger
+  dashboardVersion: number;
+  triggerDashboardRefresh: () => void;
+  
   // Notifications
   notifications: Array<{
     id: string;
@@ -119,47 +128,81 @@ export const useAuthStore = create<AuthState>()(
   )
 );
 
-// Store principal de l'application
-export const useAppStore = create<AppState>()((set, get) => ({
-  // Navigation
-  sidebarOpen: false,
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+// Store principal de l'application avec persistence pour les messages lus
+export const useAppStore = create<AppState>()((
+  persist(
+    (set, get) => ({
+      // Navigation
+      sidebarOpen: false,
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
-  // Theme
-  theme: 'light',
-  toggleTheme: () => set(state => ({ 
-    theme: state.theme === 'light' ? 'dark' : 'light' 
-  })),
+      // Theme
+      theme: 'light',
+      toggleTheme: () => set(state => ({ 
+        theme: state.theme === 'light' ? 'dark' : 'light' 
+      })),
 
-  // API Status
-  apiConnected: null,
-  setApiConnected: (connected) => set({ apiConnected: connected }),
+      // API Status
+      apiConnected: null,
+      setApiConnected: (connected) => set({ apiConnected: connected }),
 
-  // Notifications
-  notifications: [],
-  addNotification: (notification) => {
-    const id = Date.now().toString();
-    const newNotification = {
-      ...notification,
-      id,
-      timestamp: new Date()
-    };
-    set(state => ({
-      notifications: [newNotification, ...state.notifications].slice(0, 10) // Garder les 10 dernières
-    }));
-    
-    // Auto-remove après 5 secondes pour les notifications success/info
-    if (['success', 'info'].includes(notification.type)) {
-      setTimeout(() => {
-        get().removeNotification(id);
-      }, 5000);
+      // Messages state
+      readMessages: new Set<string>(),
+      markMessageAsRead: (messageId) => set(state => {
+        const newState = {
+          readMessages: new Set([...state.readMessages, messageId]),
+          dashboardVersion: state.dashboardVersion + 1 // Trigger dashboard refresh
+        };
+        return newState;
+      }),
+      isMessageRead: (messageId) => get().readMessages.has(messageId),
+
+      // Dashboard refresh trigger
+      dashboardVersion: 0,
+      triggerDashboardRefresh: () => set(state => ({
+        dashboardVersion: state.dashboardVersion + 1
+      })),
+
+      // Notifications
+      notifications: [],
+      addNotification: (notification) => {
+        const id = Date.now().toString();
+        const newNotification = {
+          ...notification,
+          id,
+          timestamp: new Date()
+        };
+        set(state => ({
+          notifications: [newNotification, ...state.notifications].slice(0, 10) // Garder les 10 dernières
+        }));
+        
+        // Auto-remove après 5 secondes pour les notifications success/info
+        if (['success', 'info'].includes(notification.type)) {
+          setTimeout(() => {
+            get().removeNotification(id);
+          }, 5000);
+        }
+      },
+      removeNotification: (id) => set(state => ({
+        notifications: state.notifications.filter(n => n.id !== id)
+      })),
+      clearNotifications: () => set({ notifications: [] })
+    }),
+    {
+      name: 'notecibolt-app',
+      partialize: (state) => ({
+        theme: state.theme,
+        readMessages: Array.from(state.readMessages) // Convertir Set en Array pour la sérialisation
+      }),
+      // Reconstituer le Set à partir de l'Array lors du chargement
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray((state as any).readMessages)) {
+          state.readMessages = new Set((state as any).readMessages);
+        }
+      }
     }
-  },
-  removeNotification: (id) => set(state => ({
-    notifications: state.notifications.filter(n => n.id !== id)
-  })),
-  clearNotifications: () => set({ notifications: [] })
-}));
+  )
+));
 
 // Sélecteurs utiles
 export const selectUser = (state: AuthState) => state.user;

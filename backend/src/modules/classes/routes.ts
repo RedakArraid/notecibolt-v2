@@ -1,3 +1,6 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 const router = Router();
-export default router; 
+router.get('/', (req: Request, res: Response) => {
+  res.json({ success: true, data: [], message: 'Classes endpoint' });
+});
+export default router;

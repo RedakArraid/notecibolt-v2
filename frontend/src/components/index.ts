@@ -37,3 +37,12 @@ export { Breadcrumbs } from './Layout/Breadcrumbs';
 
 // Auth components (déjà existants)
 export { EnhancedLoginPage } from './Auth/EnhancedLoginPage';
+
+// Students components
+export { StudentManagement } from './Students/StudentManagement';
+
+// Messages components (déjà existant)
+export { MessageList } from './Messages/MessageList';
+
+// Attendance components
+export { AttendanceManagement } from './Attendance/AttendanceManagement';

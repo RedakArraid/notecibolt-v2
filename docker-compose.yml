@@ -66,6 +66,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
+    command: ["/bin/sh", "/app/init-docker.sh"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,6 +74,11 @@ services:
         condition: service_healthy
     networks:
       - notecibolt_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Frontend React (mode développement)  
   frontend:

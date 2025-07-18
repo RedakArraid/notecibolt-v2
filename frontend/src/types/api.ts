@@ -34,3 +34,49 @@ export interface User {
   createdAt: string;
   updatedAt: string;
 }
+
+// Types pour le module Students
+export interface Student extends User {
+  role: 'student';
+  address?: string;
+  dateOfBirth?: string;
+  enrollmentDate: string;
+  studentId: string;
+  class?: {
+    id: string;
+    name: string;
+    level: string;
+  };
+  parent?: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  academicInfo?: {
+    currentGPA: number;
+    totalCredits: number;
+    completedCredits: number;
+    attendanceRate: number;
+  };
+}
+
+export interface Teacher extends User {
+  role: 'teacher';
+  address?: string;
+  specialization?: string;
+  department?: string;
+  employeeId: string;
+  subjects?: string[];
+  classes?: string[];
+}
+
+export interface Parent extends User {
+  role: 'parent';
+  address?: string;
+  children?: {
+    id: string;
+    name: string;
+    class: string;
+  }[];
+}

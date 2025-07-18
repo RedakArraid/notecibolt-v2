@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { dashboardService, type DashboardData } from '../services/api';
-import { useAuthStore } from '../store';
+import { useAuthStore, useAppStore } from '../store';
 
 export const useDashboard = () => {
   const user = useAuthStore(state => state.user);
+  const dashboardVersion = useAppStore(state => state.dashboardVersion);
+  const isMessageRead = useAppStore(state => state.isMessageRead);
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,16 +34,36 @@ export const useDashboard = () => {
     }
   };
 
-  // Charger les données au montage du composant et quand l'utilisateur change
+  // Charger les données au montage du composant et quand l'utilisateur change ou que dashboardVersion change
   useEffect(() => {
     if (user) {
       loadDashboardData();
     }
-  }, [user?.id]);
+  }, [user?.id, dashboardVersion]); // Ajouter dashboardVersion comme dépendance
 
   // Fonction pour recharger manuellement
   const refresh = () => {
     loadDashboardData(true);
+  };
+
+  // Recalculer les statistiques en prenant en compte l'état du store
+  const getUpdatedStats = () => {
+    if (!data) {
+      return {
+        overallAverage: 0,
+        pendingAssignments: 0,
+        unreadMessages: 0,
+        earnedAchievements: 0,
+      };
+    }
+
+    // Recalculer les messages non lus en prenant en compte le store
+    const unreadMessages = data.messages.filter(m => !(m.read || isMessageRead(m.id))).length;
+
+    return {
+      ...data.stats,
+      unreadMessages
+    };
   };
 
   return {
@@ -49,18 +71,15 @@ export const useDashboard = () => {
     isLoading,
     error,
     refresh,
-    // Statistiques rapides
-    stats: data?.stats || {
-      overallAverage: 0,
-      pendingAssignments: 0,
-      unreadMessages: 0,
-      earnedAchievements: 0,
-    },
+    // Statistiques rapides avec recalcul des messages non lus
+    stats: getUpdatedStats(),
     // Données individuelles pour faciliter l'accès
     recentGrades: data?.recentGrades || [],
     subjects: data?.subjects || [],
     upcomingAssignments: data?.upcomingAssignments || [],
     messages: data?.messages || [],
     achievements: data?.achievements || [],
+    // Statut de connexion
+    connectionStatus: error ? 'disconnected' : 'connected',
   };
 };

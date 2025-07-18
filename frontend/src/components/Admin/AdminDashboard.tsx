@@ -1,309 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
-  Users, BookOpen, TrendingUp, AlertTriangle, DollarSign,
+  Users, BookOpen, AlertTriangle, DollarSign,
   School, Award, CheckCircle, Target, Bell, Settings,
   RefreshCw, Wifi, WifiOff, BarChart3, Mail
 } from 'lucide-react';
-
-interface SystemMetrics {
-  totalStudents: number;
-  totalTeachers: number;
-  totalStaff: number;
-  totalClasses: number;
-  averageClassSize: number;
-  attendanceRate: number;
-  academicPerformance: number;
-  financialHealth: number;
-  parentSatisfaction: number;
-  teacherRetention: number;
-  serverStatus: 'connected' | 'disconnected';
-  lastUpdate: string;
-}
-
-interface FinancialData {
-  totalRevenue: number;
-  pendingPayments: number;
-  monthlyExpenses: number;
-  profitMargin: number;
-  budgetUtilization: number;
-}
-
-interface Alert {
-  id: string;
-  type: 'financial' | 'academic' | 'staff' | 'infrastructure';
-  severity: 'high' | 'medium' | 'low';
-  title: string;
-  message: string;
-  count: number;
-  action: string;
-}
-
-interface Event {
-  id: string;
-  type: 'admission' | 'payment' | 'incident' | 'achievement';
-  title: string;
-  description: string;
-  time: string;
-  icon: any;
-  color: string;
-}
-
-interface DepartmentStat {
-  name: string;
-  teachers: number;
-  students: number;
-  averageGrade: number;
-  satisfaction: number;
-  color: string;
-}
+import { useAdminDashboard } from '../../hooks/useAdminDashboard';
+import { StatCard } from './StatCard';
+import { AlertCard } from './AlertCard';
+import { EventCard } from './EventCard';
+import { FinancialMetrics } from './FinancialMetrics';
+import { DepartmentStats } from './DepartmentStats';
 
 export const AdminDashboard: React.FC = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
-  const [isLoading, setIsLoading] = useState(true);
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected'>('disconnected');
+  const { 
+    metrics, 
+    isLoading, 
+    error, 
+    connectionStatus, 
+    lastRefresh, 
+    refreshMetrics,
+    clearError 
+  } = useAdminDashboard(selectedPeriod);
 
-  // État des données
-  const [schoolKPIs, setSchoolKPIs] = useState<SystemMetrics>({
-    totalStudents: 0,
-    totalTeachers: 0,
-    totalStaff: 0,
-    totalClasses: 0,
-    averageClassSize: 0,
-    attendanceRate: 0,
-    academicPerformance: 0,
-    financialHealth: 0,
-    parentSatisfaction: 0,
-    teacherRetention: 0,
-    serverStatus: 'disconnected',
-    lastUpdate: new Date().toISOString()
-  });
-
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    totalRevenue: 0,
-    pendingPayments: 0,
-    monthlyExpenses: 0,
-    profitMargin: 0,
-    budgetUtilization: 0
-  });
-
-  const [criticalAlerts, setCriticalAlerts] = useState<Alert[]>([]);
-  const [recentEvents, setRecentEvents] = useState<Event[]>([]);
-  const [departmentStats, setDepartmentStats] = useState<DepartmentStat[]>([]);
-
-  // Données de fallback
-  const mockData = {
-    schoolKPIs: {
-      totalStudents: 856,
-      totalTeachers: 45,
-      totalStaff: 12,
-      totalClasses: 28,
-      averageClassSize: 30.6,
-      attendanceRate: 94.8,
-      academicPerformance: 15.2,
-      financialHealth: 87.5,
-      parentSatisfaction: 92.3,
-      teacherRetention: 96.7,
-      serverStatus: 'disconnected' as const,
-      lastUpdate: new Date().toISOString()
-    },
-    financialData: {
-      totalRevenue: 245750000,
-      pendingPayments: 18500000,
-      monthlyExpenses: 42300000,
-      profitMargin: 23.5,
-      budgetUtilization: 78.2
-    },
-    criticalAlerts: [
-      {
-        id: 'alert-1',
-        type: 'financial' as const,
-        severity: 'high' as const,
-        title: 'Retards de paiement',
-        message: '23 familles ont des impayés de plus de 30 jours',
-        count: 23,
-        action: 'Voir les détails'
-      },
-      {
-        id: 'alert-2',
-        type: 'academic' as const,
-        severity: 'medium' as const,
-        title: 'Résultats en baisse',
-        message: 'Classe de 3eB: moyenne générale sous 10/20',
-        count: 1,
-        action: 'Analyser'
-      },
-      {
-        id: 'alert-3',
-        type: 'staff' as const,
-        severity: 'high' as const,
-        title: 'Absence enseignant',
-        message: 'M. Dupont absent depuis 3 jours sans justificatif',
-        count: 1,
-        action: 'Contacter'
-      }
-    ],
-    recentEvents: [
-      {
-        id: 'event-1',
-        type: 'admission' as const,
-        title: 'Nouvelle inscription',
-        description: 'Lucas Bernard - Seconde A',
-        time: '2h',
-        icon: Users,
-        color: 'blue'
-      },
-      {
-        id: 'event-2',
-        type: 'payment' as const,
-        title: 'Paiement reçu',
-        description: '450,000 FCFA - Famille Diallo',
-        time: '4h',
-        icon: DollarSign,
-        color: 'green'
-      },
-      {
-        id: 'event-3',
-        type: 'incident' as const,
-        title: 'Incident disciplinaire',
-        description: 'Altercation en cours de récréation',
-        time: '6h',
-        icon: AlertTriangle,
-        color: 'orange'
-      },
-      {
-        id: 'event-4',
-        type: 'achievement' as const,
-        title: 'Résultat exceptionnel',
-        description: 'Marie Dubois - 20/20 en Mathématiques',
-        time: '1j',
-        icon: Award,
-        color: 'purple'
-      }
-    ],
-    departmentStats: [
-      {
-        name: 'Sciences',
-        teachers: 12,
-        students: 245,
-        averageGrade: 14.8,
-        satisfaction: 89.2,
-        color: 'blue'
-      },
-      {
-        name: 'Lettres',
-        teachers: 10,
-        students: 298,
-        averageGrade: 15.1,
-        satisfaction: 91.5,
-        color: 'green'
-      },
-      {
-        name: 'Langues',
-        teachers: 8,
-        students: 856,
-        averageGrade: 14.2,
-        satisfaction: 87.8,
-        color: 'purple'
-      },
-      {
-        name: 'Arts & Sports',
-        teachers: 6,
-        students: 412,
-        averageGrade: 16.3,
-        satisfaction: 94.1,
-        color: 'orange'
-      }
-    ]
+  const handleRefresh = async () => {
+    await refreshMetrics();
   };
 
-  // Fonction pour charger les données depuis l'API
-  const loadSystemMetrics = async () => {
-    setIsLoading(true);
-    try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
-      
-      // Test de connectivité API
-      const healthResponse = await fetch(`${API_BASE_URL}/health`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (healthResponse.ok) {
-        setConnectionStatus('connected');
-        
-        // Charger les métriques système (simulé pour l'instant)
-        const metricsResponse = await fetch(`${API_BASE_URL}/admin/metrics`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('notecibolt_token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (metricsResponse.ok) {
-          const data = await metricsResponse.json();
-          setSchoolKPIs({
-            ...data.systemMetrics,
-            serverStatus: 'connected',
-            lastUpdate: new Date().toISOString()
-          });
-          setFinancialData(data.financialData);
-          setCriticalAlerts(data.alerts);
-          setRecentEvents(data.events);
-          setDepartmentStats(data.departments);
-        } else {
-          throw new Error('Erreur lors du chargement des métriques');
-        }
-      } else {
-        throw new Error('API indisponible');
-      }
-    } catch (error) {
-      console.log('🔄 Basculement vers les données mockées:', error);
-      setConnectionStatus('disconnected');
-      
-      // Utiliser les données de fallback
-      setSchoolKPIs(mockData.schoolKPIs);
-      setFinancialData(mockData.financialData);
-      setCriticalAlerts(mockData.criticalAlerts);
-      setRecentEvents(mockData.recentEvents);
-      setDepartmentStats(mockData.departmentStats);
-    } finally {
-      setIsLoading(false);
-      setLastRefresh(new Date());
-    }
-  };
-
-  // Chargement initial des données
-  useEffect(() => {
-    loadSystemMetrics();
-  }, [selectedPeriod]);
-
-  // Fonction de rafraîchissement manuel
-  const handleRefresh = () => {
-    loadSystemMetrics();
-  };
-
-  const getAlertColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return 'bg-red-100 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300';
-      case 'medium': return 'bg-orange-100 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-300';
-      case 'low': return 'bg-yellow-100 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300';
-      default: return 'bg-gray-100 border-gray-200 text-gray-800 dark:bg-gray-900/20 dark:border-gray-800 dark:text-gray-300';
-    }
-  };
-
-  const getEventColor = (color: string) => {
-    const colors = {
-      blue: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-      green: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
-      orange: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400',
-      purple: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
-    };
-    return colors[color as keyof typeof colors] || colors.blue;
-  };
-
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR').format(amount) + ' FCFA';
+  const handleAlertAction = (alertId: string) => {
+    console.log('Action sur l\'alerte:', alertId);
+    // Navigation vers la page détaillée de l'alerte
   };
 
   if (isLoading) {
@@ -317,9 +43,26 @@ export const AdminDashboard: React.FC = () => {
     );
   }
 
+  if (!metrics) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Erreur lors du chargement des données</p>
+          <button 
+            onClick={handleRefresh}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* En-tête avec informations de l'établissement */}
+      {/* En-tête avec informations de l'établissement - EXACT V1 */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl p-6 text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -334,15 +77,15 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200">
                 <div className="flex items-center gap-1">
                   <Users className="w-4 h-4" />
-                  {schoolKPIs.totalStudents} élèves
+                  {metrics.systemMetrics.totalStudents} élèves
                 </div>
                 <div className="flex items-center gap-1">
                   <BookOpen className="w-4 h-4" />
-                  {schoolKPIs.totalClasses} classes
+                  {metrics.systemMetrics.totalClasses} classes
                 </div>
                 <div className="flex items-center gap-1">
                   <Award className="w-4 h-4" />
-                  {schoolKPIs.totalTeachers} enseignants
+                  {metrics.systemMetrics.totalTeachers} enseignants
                 </div>
                 <div className="flex items-center gap-1">
                   {connectionStatus === 'connected' ? (
@@ -358,14 +101,14 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold">{schoolKPIs.academicPerformance}/20</div>
+            <div className="text-3xl font-bold">{metrics.systemMetrics.academicPerformance}/20</div>
             <div className="text-indigo-100">Performance académique</div>
             <div className="text-sm text-indigo-200 mt-1">+0.8 vs mois dernier</div>
           </div>
         </div>
       </div>
 
-      {/* Contrôles de période et rafraîchissement */}
+      {/* Contrôles de période et rafraîchissement - EXACT V1 */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -397,7 +140,94 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Actions rapides - INTERFACE COMPLÈTE V1 */}
+      {/* KPIs principaux - EXACT V1 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <StatCard
+          title="Élèves"
+          value={metrics.systemMetrics.totalStudents}
+          icon={Users}
+          trend="+12 ce mois"
+          color="blue"
+        />
+        <StatCard
+          title="Présence"
+          value={`${metrics.systemMetrics.attendanceRate}%`}
+          icon={CheckCircle}
+          trend="+1.2% ce mois"
+          color="green"
+        />
+        <StatCard
+          title="Marge"
+          value={`${metrics.financialData.profitMargin}%`}
+          icon={DollarSign}
+          trend="+2.1% ce mois"
+          color="purple"
+        />
+        <StatCard
+          title="Satisfaction"
+          value={`${metrics.systemMetrics.parentSatisfaction}%`}
+          icon={Award}
+          trend="+0.8% ce mois"
+          color="orange"
+        />
+        <StatCard
+          title="Rétention"
+          value={`${metrics.systemMetrics.teacherRetention}%`}
+          icon={Target}
+          trend="Stable"
+          trendDirection="stable"
+          color="red"
+        />
+      </div>
+
+      {/* Alertes et Activité - EXACT V1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Alertes critiques */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Alertes critiques
+            </h3>
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-red-600" />
+              <span className="text-sm font-medium text-red-600">
+                {metrics.alerts.filter(a => a.severity === 'high').length} urgentes
+              </span>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {metrics.alerts.map((alert) => (
+              <AlertCard 
+                key={alert.id} 
+                alert={alert} 
+                onActionClick={handleAlertAction}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Activité récente */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+            Activité récente
+          </h3>
+          
+          <div className="space-y-4">
+            {metrics.events.map((event) => (
+              <EventCard key={event.id} event={event} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Finances et Départements - EXACT V1 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <FinancialMetrics financialData={metrics.financialData} />
+        <DepartmentStats departments={metrics.departments} />
+      </div>
+
+      {/* Actions rapides - EXACT V1 */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
           Actions rapides de direction
@@ -446,20 +276,45 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Bannière info v2 avec connexion BDD */}
+      {/* Bannière de statut v2 */}
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
         <div className="flex items-center gap-3">
           <BarChart3 className="w-5 h-5 text-blue-600" />
           <div>
             <h4 className="font-semibold text-blue-900 dark:text-blue-100">
-              ✅ AdminDashboard v2 : Interface complète + Connexion base de données
+              ✅ Interface Admin v1 → v2 : Migration complète avec connexion base de données
             </h4>
             <p className="text-sm text-blue-700 dark:text-blue-300">
-              Toutes les fonctionnalités de la v1 + métriques temps réel depuis PostgreSQL avec fallback intelligent
+              Toutes les fonctionnalités de la v1 restaurées + métriques temps réel depuis PostgreSQL avec fallback intelligent
             </p>
           </div>
         </div>
       </div>
+
+      {/* Message d'erreur si nécessaire */}
+      {error && (
+        <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <div>
+                <h4 className="font-semibold text-orange-900 dark:text-orange-100">
+                  Avertissement connexion
+                </h4>
+                <p className="text-sm text-orange-700 dark:text-orange-300">
+                  {error}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={clearError}
+              className="px-3 py-1 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              Masquer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

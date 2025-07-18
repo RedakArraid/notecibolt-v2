@@ -5,6 +5,8 @@ export { assignmentsService, type Assignment } from './assignmentsService';
 export { subjectsService, type Subject } from './subjectsService';
 export { messagesService, type Message } from './messagesService';
 export { achievementsService, type Achievement } from './achievementsService';
+export { studentsService, type Student, type StudentStats, type StudentFilters } from './studentsService';
+export { attendanceService, type AttendanceRecord, type AttendanceStats, type AttendanceFilters } from './attendanceService';
 export { adminService, type AdminStats, type AdminActivity, type AdminAlert, type AdminDashboardData } from './adminService';
 
 // Service centralisé pour le dashboard

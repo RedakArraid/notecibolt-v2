@@ -1,80 +1,66 @@
-import { Router } from 'express';
-import { Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 
 const router = Router();
 
-// Données mockées pour les tests
+// Mock data pour les notes
 const mockGrades = [
   {
     id: '1',
-    studentId: '1',
-    subject: 'Mathématiques',
-    value: 18,
-    maxValue: 20,
-    date: '2025-01-15',
-    type: 'test',
-    comment: 'Excellent travail sur les équations différentielles',
-    teacherId: 'teacher-1'
+    subjectName: 'Mathématiques',
+    assignmentName: 'Contrôle Algèbre',
+    grade: 16,
+    maxGrade: 20,
+    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    teacher: 'M. Traoré'
   },
   {
     id: '2',
-    studentId: '1',
-    subject: 'Français',
-    value: 15,
-    maxValue: 20,
-    date: '2025-01-14',
-    type: 'homework',
-    comment: 'Bonne analyse littéraire, développer l\'argumentation',
-    teacherId: 'teacher-2'
+    subjectName: 'Sciences Physiques',
+    assignmentName: 'TP Électricité',
+    grade: 14.5,
+    maxGrade: 20,
+    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    teacher: 'Mme Keita'
   },
   {
     id: '3',
-    studentId: '1',
-    subject: 'Physique',
-    value: 16.5,
-    maxValue: 20,
-    date: '2025-01-12',
-    type: 'quiz',
-    comment: 'Très bonne compréhension des concepts',
-    teacherId: 'teacher-1'
+    subjectName: 'Français',
+    assignmentName: 'Rédaction',
+    grade: 13,
+    maxGrade: 20,
+    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    teacher: 'M. Diarra'
   }
 ];
 
-// GET /api/v1/grades/me/recent - Notes récentes de l'utilisateur connecté
-router.get('/me/recent', (_req: Request, res: Response) => {
-  console.log('📊 GET /api/v1/grades/me/recent');
-  res.json({
-    success: true,
-    data: mockGrades,
-    message: 'Notes récentes récupérées avec succès'
-  });
+// GET /api/v1/grades/me/recent - Obtenir les notes récentes de l'utilisateur
+router.get('/me/recent', (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 5;
+    const userId = req.user?.id;
+    
+    console.log(`📊 Fetching ${limit} recent grades for user ${userId}`);
+    
+    const recentGrades = mockGrades.slice(0, limit);
+    
+    res.json({
+      success: true,
+      data: recentGrades,
+      count: recentGrades.length,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('❌ Error fetching recent grades:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur lors du chargement des notes récentes',
+      error: error.message
+    });
+  }
 });
 
-// GET /api/v1/grades/student/:id/recent - Notes récentes d'un étudiant
-router.get('/student/:id/recent', (req: Request, res: Response) => {
-  const studentId = req.params.id;
-  console.log(`📊 GET /api/v1/grades/student/${studentId}/recent`);
-  
-  const studentGrades = mockGrades.filter(grade => grade.studentId === studentId);
-  res.json({
-    success: true,
-    data: studentGrades,
-    message: `Notes récentes de l'étudiant ${studentId} récupérées avec succès`
-  });
-});
-
-// GET /api/v1/grades/me/average - Moyenne de l'utilisateur connecté
-router.get('/me/average', (_req: Request, res: Response) => {
-  console.log('📊 GET /api/v1/grades/me/average');
-  
-  const total = mockGrades.reduce((sum, grade) => sum + grade.value, 0);
-  const average = total / mockGrades.length;
-  
-  res.json({
-    success: true,
-    data: { average: Number(average.toFixed(2)) },
-    message: 'Moyenne calculée avec succès'
-  });
+router.get('/', (req: Request, res: Response) => {
+  res.json({ success: true, data: mockGrades, message: 'Grades endpoint' });
 });
 
 export default router;

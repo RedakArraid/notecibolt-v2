@@ -90,6 +90,18 @@ class MemoryCache<T = any> {
     this.cache.clear();
   }
 
+  // Supprimer les clés qui correspondent à un pattern
+  deletePattern(pattern: string): number {
+    let deleted = 0;
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+        deleted++;
+      }
+    }
+    return deleted;
+  }
+
   size(): number {
     // Nettoyer les entrées expirées avant de retourner la taille
     this.cleanup();

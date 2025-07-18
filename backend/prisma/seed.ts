@@ -4,74 +4,50 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Début du seeding de la base de données...');
+  console.log('🌱 Début du seeding NoteCibolt v2...');
 
   // Nettoyer les données existantes
-  await prisma.userSession.deleteMany();
+  console.log('🗑️ Nettoyage des données...');
   await prisma.studentAchievement.deleteMany();
-  await prisma.grade.deleteMany();
+  await prisma.achievement.deleteMany();
+  await prisma.behaviorRecord.deleteMany();
+  await prisma.reportCard.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.fileAttachment.deleteMany();
   await prisma.assignmentSubmission.deleteMany();
   await prisma.assignment.deleteMany();
+  await prisma.grade.deleteMany();
   await prisma.attendanceRecord.deleteMany();
+  await prisma.schedule.deleteMany();
   await prisma.message.deleteMany();
   await prisma.financialRecord.deleteMany();
+  await prisma.learningResource.deleteMany();
+  await prisma.virtualClass.deleteMany();
   await prisma.admissionApplication.deleteMany();
-  await prisma.schedule.deleteMany();
+  await prisma.userSession.deleteMany();
+  await prisma.classSubject.deleteMany();
+  await prisma.assignmentClass.deleteMany();
+  await prisma.teacherClass.deleteMany();
+  await prisma.teacherSubject.deleteMany();
   await prisma.student.deleteMany();
   await prisma.teacher.deleteMany();
   await prisma.parent.deleteMany();
   await prisma.admin.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.class.deleteMany();
   await prisma.subject.deleteMany();
-  await prisma.achievement.deleteMany();
+  await prisma.class.deleteMany();
+  await prisma.user.deleteMany();
 
-  // Hasher les mots de passe
-  const hashedPassword = await bcrypt.hash('password123', 12);
-
-  // Créer les matières
-  const mathSubject = await prisma.subject.create({
-    data: {
-      name: 'Mathématiques',
-      code: 'MATH',
-      description: 'Mathématiques niveau lycée',
-      department: 'Sciences',
-      credits: 6,
-      color: '#EF4444'
-    }
-  });
-
-  const frenchSubject = await prisma.subject.create({
-    data: {
-      name: 'Français',
-      code: 'FR',
-      description: 'Français niveau lycée',
-      department: 'Lettres',
-      credits: 4,
-      color: '#10B981'
-    }
-  });
-
-  // Créer les classes
-  const terminaleS = await prisma.class.create({
-    data: {
-      name: 'Terminale S1',
-      level: 'Terminale',
-      academicYear: '2024-2025',
-      room: 'Salle 201',
-      maxStudents: 35
-    }
-  });
-
-  // Créer l'administrateur
+  // ===========================
+  // CRÉER L'ADMIN
+  // ===========================
+  
   const adminUser = await prisma.user.create({
     data: {
       email: 'admin@notecibolt.com',
-      name: 'Administrateur',
+      password: await bcrypt.hash('admin123', 12),
+      name: 'Directrice Martin',
       role: 'ADMIN',
-      isActive: true,
-      emailVerifiedAt: new Date(),
-      password: hashedPassword
+      isActive: true
     }
   });
 
@@ -82,158 +58,265 @@ async function main() {
     }
   });
 
-  // Créer un enseignant
-  const teacherUser = await prisma.user.create({
-    data: {
-      email: 'teacher@notecibolt.com',
-      name: 'Jean Martin',
-      role: 'TEACHER',
-      isActive: true,
-      emailVerifiedAt: new Date(),
-      phone: '+33 1 23 45 67 89',
-      password: hashedPassword
-    }
-  });
+  console.log('✅ Admin créé:', adminUser.name);
 
-  const teacher = await prisma.teacher.create({
-    data: {
-      userId: teacherUser.id,
-      employeeId: 'TEA001',
-      department: 'Sciences',
-      qualifications: ['Agrégation de Mathématiques'],
-      hireDate: new Date('2020-09-01')
-    }
-  });
+  // ===========================
+  // CRÉER LES CLASSES
+  // ===========================
+  
+  const classNames = [
+    'CP-A', 'CP-B', 'CE1-A', 'CE1-B', 'CE2-A', 'CE2-B', 
+    'CM1-A', 'CM1-B', 'CM2-A', 'CM2-B',
+    '6ème-A', '6ème-B', '5ème-A', '5ème-B', '4ème-A', '4ème-B', 
+    '3ème-A', '3ème-B', '2nde-A', '2nde-B', '1ère-A', '1ère-B', 
+    'Terminale-A', 'Terminale-B', 'Terminale-C', 'Terminale-D',
+    'BTS-1', 'BTS-2'
+  ];
 
-  // Créer un parent
-  const parentUser = await prisma.user.create({
-    data: {
-      email: 'parent@notecibolt.com',
-      name: 'Pierre Dubois',
-      role: 'PARENT',
-      isActive: true,
-      emailVerifiedAt: new Date(),
-      phone: '+33 6 12 34 56 78',
-      password: hashedPassword
-    }
-  });
+  const classes = [];
+  for (let i = 0; i < 28; i++) {
+    const className = classNames[i] || `Classe-${i + 1}`;
+    const level = className.includes('CP') || className.includes('CE') || className.includes('CM') ? 'Primaire' :
+                  className.includes('6ème') || className.includes('5ème') || className.includes('4ème') || className.includes('3ème') ? 'Collège' :
+                  className.includes('2nde') || className.includes('1ère') || className.includes('Terminale') ? 'Lycée' :
+                  'Supérieur';
 
-  const parent = await prisma.parent.create({
-    data: {
-      userId: parentUser.id,
-      occupation: 'Ingénieur',
-      preferredContactMethod: 'EMAIL'
-    }
-  });
+    const classRecord = await prisma.class.create({
+      data: {
+        name: className,
+        level: level,
+        academicYear: '2024-2025',
+        room: `Salle-${i + 1}`,
+        maxStudents: 30
+      }
+    });
+    classes.push(classRecord);
+  }
 
-  // Créer un élève
-  const studentUser = await prisma.user.create({
-    data: {
-      email: 'student@notecibolt.com',
-      name: 'Marie Dubois',
-      role: 'STUDENT',
-      isActive: true,
-      emailVerifiedAt: new Date(),
-      dateOfBirth: new Date('2007-03-15'),
-      password: hashedPassword
-    }
-  });
+  console.log('✅ Classes créées:', classes.length);
 
-  const student = await prisma.student.create({
-    data: {
-      userId: studentUser.id,
-      studentId: 'STU001',
-      classId: terminaleS.id,
-      parentIds: [parent.id],
-      admissionDate: new Date('2023-09-01'),
-      academicYear: '2024-2025',
-      allergies: ['Arachides'],
-      medications: [],
-      emergencyMedicalContact: 'Dr. Martin - 01 42 34 56 78'
-    }
-  });
+  // ===========================
+  // CRÉER LES MATIÈRES
+  // ===========================
+  
+  const subjects = await Promise.all([
+    prisma.subject.create({
+      data: {
+        name: 'Mathématiques',
+        code: 'MATH',
+        department: 'Sciences',
+        credits: 3,
+        color: '#3B82F6'
+      }
+    }),
+    prisma.subject.create({
+      data: {
+        name: 'Français',
+        code: 'FR',
+        department: 'Lettres',
+        credits: 3,
+        color: '#10B981'
+      }
+    }),
+    prisma.subject.create({
+      data: {
+        name: 'Anglais',
+        code: 'EN',
+        department: 'Langues',
+        credits: 2,
+        color: '#8B5CF6'
+      }
+    }),
+    prisma.subject.create({
+      data: {
+        name: 'EPS',
+        code: 'EPS',
+        department: 'Arts & Sports',
+        credits: 1,
+        color: '#F97316'
+      }
+    })
+  ]);
 
-  // Créer des achievements
-  // const achievement1 = await prisma.achievement.create({
-  //   data: {
-  //     title: 'Mathématicien prodige',
-  //     description: 'Obtenir plus de 17/20 en mathématiques pendant 3 évaluations consécutives',
-  //     icon: 'Calculator',
-  //     category: 'ACADEMIC',
-  //     points: 50,
-  //     criteria: ['Note > 17/20', 'Trois évaluations consécutives'],
-  //     rarity: 'RARE'
-  //   }
-  // });
+  console.log('✅ Matières créées:', subjects.length);
 
-  // Créer quelques notes
-  await prisma.grade.create({
-    data: {
-      studentId: student.id,
-      subjectId: mathSubject.id,
-      teacherId: teacher.id,
-      value: 18,
-      maxValue: 20,
-      type: 'TEST',
-      comment: 'Excellent travail sur les équations différentielles',
-      date: new Date()
-    }
-  });
+  // ===========================
+  // CRÉER LES ENSEIGNANTS
+  // ===========================
+  
+  const teachers = [];
+  const teacherNames = [
+    'M. Dupont', 'Mme Dubois', 'M. Martin', 'Mme Bernard', 'M. Moreau',
+    'Mme Petit', 'M. Durand', 'Mme Leroy', 'M. Girard', 'Mme Fournier',
+    'M. Bonnet', 'Mme Mercier', 'M. Boyer', 'Mme Blanchard', 'M. Joly',
+    'Mme Garnier', 'M. Faure', 'Mme Lemaire', 'M. Bertrand', 'Mme Simon',
+    'M. Laurent', 'Mme Michel', 'M. Lefebvre', 'Mme Lecomte', 'M. Roux',
+    'Mme Legrand', 'M. Morel', 'Mme Nicolas', 'M. Olivier', 'Mme Picard',
+    'M. Henry', 'Mme Rousseau', 'M. Gauthier', 'Mme Dumont', 'M. Lopez',
+    'Mme Fontaine', 'M. Chevalier', 'Mme Robin', 'M. Masson', 'Mme Sanchez',
+    'M. Muller', 'Mme Laurent', 'M. Andre', 'Mme Leroux', 'M. Leclerc'
+  ];
 
-  await prisma.grade.create({
-    data: {
-      studentId: student.id,
-      subjectId: frenchSubject.id,
-      teacherId: teacher.id,
-      value: 15,
-      maxValue: 20,
-      type: 'HOMEWORK',
-      comment: 'Bonne analyse littéraire',
-      date: new Date()
-    }
-  });
+  const departments = ['Sciences', 'Lettres', 'Langues', 'Arts & Sports'];
 
-  // Créer un enregistrement de présence
-  await prisma.attendanceRecord.create({
-    data: {
-      studentId: student.id,
-      teacherId: teacher.id,
-      classId: terminaleS.id,
-      date: new Date(),
-      status: 'PRESENT',
-      period: '08:00-09:00'
-    }
-  });
+  for (let i = 0; i < 45; i++) {
+    const teacherUser = await prisma.user.create({
+      data: {
+        email: `teacher${i + 1}@notecibolt.com`,
+        password: await bcrypt.hash('teacher123', 12),
+        name: teacherNames[i] || `Enseignant ${i + 1}`,
+        role: 'TEACHER',
+        isActive: true
+      }
+    });
 
-  // Créer un message
-  await prisma.message.create({
-    data: {
-      senderId: teacherUser.id,
-      recipientIds: [studentUser.id],
-      subject: 'Félicitations',
-      content: 'Félicitations pour votre excellent résultat !',
-      type: 'MESSAGE',
-      priority: 'MEDIUM'
-    }
-  });
+    const teacher = await prisma.teacher.create({
+      data: {
+        userId: teacherUser.id,
+        employeeId: `T${String(i + 1).padStart(3, '0')}`,
+        department: departments[i % departments.length],
+        qualifications: ['Licence', 'Master'],
+        hireDate: new Date(2020 + (i % 4), (i % 12), 1)
+      }
+    });
 
-  console.log('✅ Seeding terminé avec succès !');
-  console.log('\n📊 Données créées :');
-  console.log('- 1 Administrateur (admin@notecibolt.com / password123)');
-  console.log('- 1 Enseignant (teacher@notecibolt.com / password123)');
-  console.log('- 1 Parent (parent@notecibolt.com / password123)');
-  console.log('- 1 Élève (student@notecibolt.com / password123)');
-  console.log('- 2 Matières (Mathématiques, Français)');
-  console.log('- 1 Classe (Terminale S1)');
-  console.log('- 2 Notes de test');
-  console.log('- 1 Enregistrement de présence');
-  console.log('- 1 Message');
-  console.log('- 1 Achievement');
+    teachers.push(teacher);
+  }
+
+  console.log('✅ Enseignants créés:', teachers.length);
+
+  // ===========================
+  // CRÉER LES PARENTS
+  // ===========================
+  
+  const parents = [];
+  const occupations = ['Ingénieur', 'Médecin', 'Enseignant', 'Commerçant', 'Fonctionnaire'];
+  
+  for (let i = 0; i < 400; i++) {
+    const parentUser = await prisma.user.create({
+      data: {
+        email: `parent${i + 1}@notecibolt.com`,
+        password: await bcrypt.hash('parent123', 12),
+        name: `Parent ${i + 1}`,
+        role: 'PARENT',
+        isActive: true
+      }
+    });
+
+    const parent = await prisma.parent.create({
+      data: {
+        userId: parentUser.id,
+        occupation: occupations[i % occupations.length],
+        preferredContactMethod: 'EMAIL'
+      }
+    });
+
+    parents.push(parent);
+  }
+
+  console.log('✅ Parents créés:', parents.length);
+
+  // ===========================
+  // CRÉER LES ÉLÈVES
+  // ===========================
+  
+  const students = [];
+  const studentNames = [
+    'Aicha Diallo', 'Amadou Sow', 'Fatou Ndiaye', 'Ousmane Fall', 'Aminata Ba',
+    'Ibrahima Sarr', 'Khadija Sy', 'Moussa Cissé', 'Awa Diouf', 'Cheikh Gueye',
+    'Marième Thiam', 'Abdoulaye Wade', 'Ndeye Faye', 'Mamadou Diop', 'Astou Kane',
+    'Lamine Ndour', 'Coumba Seck', 'Bamba Niang', 'Dieynaba Tall', 'Serigne Mboup'
+  ];
+
+  for (let i = 0; i < 856; i++) {
+    const studentUser = await prisma.user.create({
+      data: {
+        email: `student${i + 1}@notecibolt.com`,
+        password: await bcrypt.hash('student123', 12),
+        name: studentNames[i % studentNames.length] || `Élève ${i + 1}`,
+        role: 'STUDENT',
+        isActive: true
+      }
+    });
+
+    const student = await prisma.student.create({
+      data: {
+        userId: studentUser.id,
+        studentId: `S${String(i + 1).padStart(4, '0')}`,
+        classId: classes[i % classes.length].id,
+        parentIds: [parents[i % parents.length].id],
+        admissionDate: new Date(2024, 8, 1),
+        academicYear: '2024-2025',
+        allergies: [],
+        medications: []
+      }
+    });
+
+    students.push(student);
+  }
+
+  console.log('✅ Élèves créés:', students.length);
+
+  // ===========================
+  // CRÉER QUELQUES PAIEMENTS AVEC RETARDS
+  // ===========================
+  
+  const paymentTypes = ['TUITION', 'FEES', 'MATERIALS', 'TRANSPORT', 'MEALS'];
+  const paymentStatuses = ['PENDING', 'PAID', 'OVERDUE'];
+  
+  for (let i = 0; i < 1000; i++) {
+    const randomStudent = students[Math.floor(Math.random() * students.length)];
+    const isOverdue = Math.random() > 0.85; // 15% de chance d'être en retard
+    
+    await prisma.financialRecord.create({
+      data: {
+        studentId: randomStudent.id,
+        type: paymentTypes[Math.floor(Math.random() * paymentTypes.length)] as any,
+        amount: Math.floor(Math.random() * 500000) + 100000,
+        currency: 'FCFA',
+        dueDate: isOverdue 
+          ? new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000) // Date passée
+          : new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000), // Date future
+        status: isOverdue ? 'OVERDUE' : (paymentStatuses[Math.floor(Math.random() * 2)] as any), // PENDING ou PAID
+        description: 'Frais de scolarité',
+        invoiceNumber: `INV-${String(i + 1).padStart(6, '0')}`
+      }
+    });
+  }
+
+  console.log('✅ Paiements créés: 1000 (avec retards simulés)');
+
+  // ===========================
+  // STATISTIQUES FINALES
+  // ===========================
+  
+  const finalStats = {
+    users: await prisma.user.count(),
+    students: await prisma.student.count(),
+    teachers: await prisma.teacher.count(),
+    parents: await prisma.parent.count(),
+    classes: await prisma.class.count(),
+    subjects: await prisma.subject.count(),
+    financialRecords: await prisma.financialRecord.count()
+  };
+
+  console.log('\n🎯 Seeding terminé avec succès!');
+  console.log('📊 Statistiques finales:');
+  console.log(`- Utilisateurs: ${finalStats.users}`);
+  console.log(`- Élèves: ${finalStats.students}`);
+  console.log(`- Enseignants: ${finalStats.teachers}`);
+  console.log(`- Parents: ${finalStats.parents}`);
+  console.log(`- Classes: ${finalStats.classes}`);
+  console.log(`- Matières: ${finalStats.subjects}`);
+  console.log(`- Paiements: ${finalStats.financialRecords}`);
+
+  console.log('\n✅ Base de données NoteCibolt v2 prête pour les tests!');
+  console.log('👤 Compte admin: admin@notecibolt.com / admin123');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Erreur lors du seeding :', e);
+    console.error('❌ Erreur lors du seeding:', e);
     process.exit(1);
   })
   .finally(async () => {

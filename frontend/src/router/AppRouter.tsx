@@ -17,10 +17,11 @@ import {
 
 // Composants fallback pour les modules non implémentés
 import { ComingSoon } from '../components/Fallback/ComingSoon';
+import { MessageList } from '../components/Messages/MessageList';
+import { StudentManagement } from '../components/Students/StudentManagement';
 
 // Création des composants fallback pour le router
 const MessageComingSoon = () => <ComingSoon moduleName="Système de Messagerie" expectedPhase={7} />;
-const StudentManagementComingSoon = () => <ComingSoon moduleName="Gestion des Élèves" expectedPhase={7} />;
 const AttendanceComingSoon = () => <ComingSoon moduleName="Gestion des Présences" expectedPhase={7} />;
 const ScheduleComingSoon = () => <ComingSoon moduleName="Emploi du Temps" expectedPhase={7} />;
 const FinanceComingSoon = () => <ComingSoon moduleName="Gestion Financière" expectedPhase={8} />;
@@ -78,7 +79,11 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
             <ErrorBoundary>
-              <StudentManagementComingSoon />
+              <Suspense fallback={<PageLoading />}>
+                <div className="p-6">
+                  <StudentManagement />
+                </div>
+              </Suspense>
             </ErrorBoundary>
           </ProtectedRoute>
         )
@@ -369,7 +374,9 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={['admin', 'teacher', 'student', 'parent', 'supervisor']}>
             <ErrorBoundary>
-              <MessageComingSoon />
+              <Suspense fallback={<DashboardSkeleton />}>
+                <MessageList />
+              </Suspense>
             </ErrorBoundary>
           </ProtectedRoute>
         )

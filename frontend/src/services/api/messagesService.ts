@@ -1,75 +1,223 @@
 import { apiService } from './apiService';
-import { messages as fallbackMessages } from '../../data/mockData';
+import { globalCache } from '../../utils/cache';
 
 export interface Message {
   id: string;
   senderName: string;
   senderRole: string;
-  subject: string;
+  senderId: string;
   content: string;
+  type: 'message' | 'announcement' | 'alert';
   timestamp: string;
   read: boolean;
-  priority: 'low' | 'medium' | 'high';
+  recipientId?: string;
+  attachments?: {
+    name: string;
+    url: string;
+    size: number;
+  }[];
+}
+
+export interface SendMessageRequest {
+  recipientId: string;
+  content: string;
   type?: 'message' | 'announcement' | 'alert';
+  attachments?: File[];
+}
+
+export interface MessageThread {
+  id: string;
+  participants: {
+    id: string;
+    name: string;
+    role: string;
+    avatar?: string;
+  }[];
+  lastMessage: Message;
+  unreadCount: number;
+  updatedAt: string;
+}
+
+function buildQueryString(params: Record<string, any>): string {
+  const esc = encodeURIComponent;
+  return (
+    '?' +
+    Object.keys(params)
+      .filter((k) => params[k] !== undefined && params[k] !== null)
+      .map((k) => esc(k) + '=' + esc(params[k]))
+      .join('&')
+  );
 }
 
 class MessagesService {
-  async getRecentMessages(userId?: string): Promise<Message[]> {
+  private readonly baseUrl = '/messages';
+  private readonly cachePrefix = 'messages';
+
+  // Obtenir les messages récents
+  async getRecentMessages(limit = 10): Promise<Message[]> {
+    const cacheKey = `${this.cachePrefix}-recent-${limit}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
     try {
-      const endpoint = userId ? `/messages/user/${userId}/recent` : '/messages/me/recent';
-      const response = await apiService.get(endpoint);
-      return response.data || response;
+      const url = `${this.baseUrl}/recent${buildQueryString({ limit })}`;
+      const messages = await apiService.get(url);
+      globalCache.set(cacheKey, messages, 2 * 60 * 1000); // Cache 2 minutes
+      return messages;
     } catch (error) {
-      console.warn('Failed to fetch messages from API, using fallback data:', error);
-      return fallbackMessages;
+      console.error('Erreur lors du chargement des messages récents:', error);
+      throw error;
     }
   }
 
-  async getAllMessages(userId?: string): Promise<Message[]> {
+  // Obtenir tous les messages pour l'utilisateur connecté
+  async getMessages(page = 1, limit = 20): Promise<{
+    messages: Message[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
+    const cacheKey = `${this.cachePrefix}-page-${page}-${limit}`;
     try {
-      const endpoint = userId ? `/messages/user/${userId}` : '/messages/me';
-      const response = await apiService.get(endpoint);
-      return response.data || response;
+      const url = `${this.baseUrl}${buildQueryString({ page, limit })}`;
+      const result = await apiService.get(url);
+      globalCache.set(cacheKey, result, 5 * 60 * 1000); // Cache 5 minutes
+      return result;
     } catch (error) {
-      console.warn('Failed to fetch all messages from API:', error);
-      return fallbackMessages;
+      console.error('Erreur lors du chargement des messages:', error);
+      throw error;
     }
   }
 
-  async markMessageAsRead(messageId: string): Promise<boolean> {
+  // Envoyer un message
+  async sendMessage(messageData: SendMessageRequest): Promise<Message> {
     try {
-      await apiService.put(`/messages/${messageId}/read`, {});
-      return true;
+      // Pour les fichiers, il faudrait adapter apiService pour gérer FormData, ici on fait simple
+      return await apiService.post(`${this.baseUrl}/send`, messageData);
     } catch (error) {
-      console.warn('Failed to mark message as read:', error);
-      return false;
+      console.error("Erreur lors de l'envoi du message:", error);
+      throw error;
     }
   }
 
-  async sendMessage(data: {
-    recipientIds: string[];
-    subject: string;
-    content: string;
-    priority?: 'low' | 'medium' | 'high';
-  }): Promise<boolean> {
+  // Marquer un message comme lu
+  async markAsRead(messageId: string): Promise<void> {
     try {
-      await apiService.post('/messages', data);
-      return true;
+      await apiService.put(`${this.baseUrl}/${messageId}/read`, {});
+      
+      // Invalider les caches pour forcer le rechargement
+      this.invalidateMessageCaches();
+      
+      // Mettre à jour le cache local si possible
+      this.updateMessageInCache(messageId, { read: true });
+      
     } catch (error) {
-      console.warn('Failed to send message:', error);
-      return false;
+      console.error('Erreur lors du marquage du message comme lu:', error);
+      throw error;
     }
   }
 
-  async getUnreadCount(userId?: string): Promise<number> {
-    try {
-      const endpoint = userId ? `/messages/user/${userId}/unread-count` : '/messages/me/unread-count';
-      const response = await apiService.get(endpoint);
-      return response.data?.count || response.count || 0;
-    } catch (error) {
-      console.warn('Failed to fetch unread count from API:', error);
-      return fallbackMessages.filter(m => !m.read).length;
+  // Mettre à jour un message dans le cache
+  private updateMessageInCache(messageId: string, updates: Partial<Message>): void {
+    // Mettre à jour les messages récents dans le cache
+    const recentCacheKeys = [10, 20, 50].map(limit => `${this.cachePrefix}-recent-${limit}`);
+    
+    recentCacheKeys.forEach(cacheKey => {
+      const cachedMessages = globalCache.get(cacheKey);
+      if (cachedMessages && Array.isArray(cachedMessages)) {
+        const updatedMessages = cachedMessages.map((msg: Message) => 
+          msg.id === messageId ? { ...msg, ...updates } : msg
+        );
+        globalCache.set(cacheKey, updatedMessages, 2 * 60 * 1000);
+      }
+    });
+    
+    // Invalider le cache des messages non lus
+    globalCache.delete(`${this.cachePrefix}-unread-count`);
+  }
+
+  // Obtenir le nombre de messages non lus
+  async getUnreadCount(): Promise<number> {
+    const cacheKey = `${this.cachePrefix}-unread-count`;
+    const cached = globalCache.get(cacheKey);
+    if (cached !== null) {
+      return cached;
     }
+    try {
+      const count = await apiService.get(`${this.baseUrl}/unread-count`);
+      globalCache.set(cacheKey, count, 1 * 60 * 1000); // Cache 1 minute
+      return count;
+    } catch (error) {
+      console.error('Erreur lors du chargement du nombre de messages non lus:', error);
+      return 0;
+    }
+  }
+
+  // Obtenir les contacts/utilisateurs pour composer un message
+  async getContacts(search?: string): Promise<{
+    id: string;
+    name: string;
+    role: string;
+    avatar?: string;
+    email: string;
+  }[]> {
+    const cacheKey = `${this.cachePrefix}-contacts-${search || 'all'}`;
+    const cached = globalCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const url = `${this.baseUrl}/contacts${buildQueryString(search ? { search } : {})}`;
+      const contacts = await apiService.get(url);
+      globalCache.set(cacheKey, contacts, 10 * 60 * 1000); // Cache 10 minutes
+      return contacts;
+    } catch (error) {
+      console.error('Erreur lors du chargement des contacts:', error);
+      throw error;
+    }
+  }
+
+  // Rechercher dans les messages
+  async searchMessages(query: string, filters?: {
+    type?: 'message' | 'announcement' | 'alert';
+    senderId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<Message[]> {
+    try {
+      const url = `${this.baseUrl}/search${buildQueryString({ q: query, ...filters })}`;
+      return await apiService.get(url);
+    } catch (error) {
+      console.error('Erreur lors de la recherche de messages:', error);
+      throw error;
+    }
+  }
+
+  // Invalider tous les caches liés aux messages
+  private invalidateMessageCaches(): void {
+    // Utiliser la fonction d'invalidation par pattern du cache
+    globalCache.invalidateByPattern([this.cachePrefix]);
+  }
+
+  // Polling pour les nouveaux messages (WebSocket alternative)
+  startPolling(callback: (messages: Message[]) => void, interval = 30000): () => void {
+    let isPolling = true;
+    const poll = async () => {
+      if (!isPolling) return;
+      try {
+        const messages = await this.getRecentMessages(5);
+        callback(messages);
+      } catch (error) {
+        console.warn('Erreur lors du polling des messages:', error);
+      }
+      if (isPolling) {
+        setTimeout(poll, interval);
+      }
+    };
+    setTimeout(poll, interval);
+    return () => {
+      isPolling = false;
+    };
   }
 }
 
