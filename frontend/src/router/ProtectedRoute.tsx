@@ -199,7 +199,7 @@ export const getRoutesByRole = (role: User['role']): RouteConfig[] => {
         path: '/admin/students',
         element: null,
         allowedRoles: ['admin'],
-        title: 'Gestion des élèves',
+        title: 'Gestion des utilisateurs',
         showInNavigation: true,
         icon: 'Users'
       },

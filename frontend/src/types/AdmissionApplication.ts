@@ -1,0 +1,32 @@
+export interface AdmissionApplication {
+  id: string;
+  applicationNumber: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  nationality: string;
+  previousSchool?: string;
+  desiredClass: string;
+  academicYear: string;
+  specialNeeds?: string;
+  parentId?: string;
+  fatherName: string;
+  fatherEmail: string;
+  fatherPhone: string;
+  fatherOccupation?: string;
+  motherName: string;
+  motherEmail: string;
+  motherPhone: string;
+  motherOccupation?: string;
+  guardianName?: string;
+  guardianEmail?: string;
+  guardianPhone?: string;
+  familyAddress: string;
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'ACCEPTED' | 'REJECTED' | 'WAITLISTED';
+  submittedAt: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+  notes?: string;
+  documents?: any[];
+} 

@@ -51,9 +51,9 @@ const getMenuItemsByRole = (role: User['role']): MenuItem[] => {
     case 'admin':
       return [
         { id: 'dashboard', label: 'Tableau de bord', icon: Home, path: '/admin' },
-        { id: 'students', label: 'Gestion des élèves', icon: Users, path: '/admin/students' },
-        { id: 'teachers', label: 'Gestion des enseignants', icon: UserPlus, path: '/admin/teachers' },
-        { id: 'finance', label: 'Finances', icon: CreditCard, path: '/admin/finance' },
+        { id: 'users', label: 'Gestion des utilisateurs', icon: Users, path: '/admin/students' },
+        { id: 'admissions', label: 'Gestion des admissions', icon: FileText, path: '/admin/admissions' },
+        { id: 'finance', label: 'Gestion financière', icon: CreditCard, path: '/admin/finance' },
         { id: 'reports', label: 'Rapports', icon: FileText, path: '/admin/reports' },
         { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages', badge: '3' },
         { id: 'settings', label: 'Paramètres', icon: Settings, path: '/settings' }

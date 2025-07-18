@@ -274,6 +274,107 @@ async function main() {
   console.log('✅ Paiements créés: 1000 (avec retards simulés)');
 
   // ===========================
+  // EXEMPLES SUPPLÉMENTAIRES FINANCE
+  // ===========================
+  if (students.length > 0) {
+    await prisma.financialRecord.create({
+      data: {
+        studentId: students[0].id,
+        type: 'TUITION',
+        amount: 350000,
+        currency: 'FCFA',
+        dueDate: new Date(2024, 8, 1),
+        paidDate: new Date(2024, 8, 10),
+        status: 'PAID',
+        description: 'Frais de scolarité - Trimestre 1',
+        paymentMethod: 'CARD',
+        invoiceNumber: 'INV-EX-0001',
+      }
+    });
+    await prisma.financialRecord.create({
+      data: {
+        studentId: students[0].id,
+        type: 'TRANSPORT',
+        amount: 50000,
+        currency: 'FCFA',
+        dueDate: new Date(2024, 8, 1),
+        status: 'PENDING',
+        description: 'Abonnement transport scolaire',
+        invoiceNumber: 'INV-EX-0002',
+      }
+    });
+    await prisma.financialRecord.create({
+      data: {
+        studentId: students[1].id,
+        type: 'MATERIALS',
+        amount: 25000,
+        currency: 'FCFA',
+        dueDate: new Date(2024, 8, 15),
+        status: 'OVERDUE',
+        description: 'Achat de manuels scolaires',
+        invoiceNumber: 'INV-EX-0003',
+      }
+    });
+  }
+
+  // ===========================
+  // EXEMPLES SUPPLÉMENTAIRES ADMISSIONS
+  // ===========================
+  if (parents.length > 0) {
+    await prisma.admissionApplication.create({
+      data: {
+        applicationNumber: 'ADM-2024-0001',
+        firstName: 'Lucas',
+        lastName: 'Bernard',
+        dateOfBirth: new Date(2012, 4, 12),
+        gender: 'MALE',
+        nationality: 'Française',
+        previousSchool: 'École Sainte-Marie',
+        desiredClass: '6ème',
+        academicYear: '2024-2025',
+        specialNeeds: 'Dyslexie légère',
+        parentId: parents[0].id,
+        fatherName: 'Michel Bernard',
+        fatherEmail: 'michel.bernard@email.com',
+        fatherPhone: '+33 6 12 34 56 78',
+        fatherOccupation: 'Médecin',
+        motherName: 'Anne Bernard',
+        motherEmail: 'anne.bernard@email.com',
+        motherPhone: '+33 6 87 65 43 21',
+        motherOccupation: 'Avocate',
+        familyAddress: '15 Rue des Lilas, 75012 Paris',
+        status: 'UNDER_REVIEW',
+        notes: 'Dossier complet, bon niveau académique',
+        submittedAt: new Date(2024, 6, 10)
+      }
+    });
+    await prisma.admissionApplication.create({
+      data: {
+        applicationNumber: 'ADM-2024-0002',
+        firstName: 'Fatou',
+        lastName: 'Ndiaye',
+        dateOfBirth: new Date(2011, 10, 3),
+        gender: 'FEMALE',
+        nationality: 'Sénégalaise',
+        previousSchool: 'École Les Petits Génies',
+        desiredClass: '5ème',
+        academicYear: '2024-2025',
+        parentId: parents[1].id,
+        fatherName: 'Mamadou Ndiaye',
+        fatherEmail: 'mamadou.ndiaye@email.com',
+        fatherPhone: '+221 77 123 45 67',
+        motherName: 'Aminata Diop',
+        motherEmail: 'aminata.diop@email.com',
+        motherPhone: '+221 77 765 43 21',
+        familyAddress: 'Dakar Plateau, Dakar',
+        status: 'SUBMITTED',
+        notes: 'Besoin d’un accompagnement pour l’intégration',
+        submittedAt: new Date(2024, 6, 15)
+      }
+    });
+  }
+
+  // ===========================
   // STATISTIQUES FINALES
   // ===========================
   

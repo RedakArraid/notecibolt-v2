@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export interface UserFilters {
   search?: string;
-  role?: 'student' | 'teacher' | 'parent' | 'admin' | 'staff';
+  role?: 'STUDENT' | 'TEACHER' | 'PARENT' | 'ADMIN' | 'STAFF';
   isActive?: boolean;
   sortBy?: 'name' | 'email' | 'role' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
@@ -28,7 +28,7 @@ export interface UserStats {
 export interface CreateUserRequest {
   name: string;
   email: string;
-  role: 'student' | 'teacher' | 'parent' | 'admin' | 'staff';
+  role: 'STUDENT' | 'TEACHER' | 'PARENT' | 'ADMIN' | 'STAFF';
   phone?: string;
   address?: string;
   dateOfBirth?: string;
@@ -50,7 +50,7 @@ export interface CreateUserRequest {
   };
   parentData?: {
     occupation?: string;
-    preferredContactMethod: 'email' | 'sms' | 'phone';
+    preferredContactMethod: 'EMAIL' | 'SMS' | 'PHONE';
     childrenIds?: string[];
   };
 }
@@ -119,34 +119,13 @@ export const getUsersWithFilters = async (
           student: {
             include: {
               class: true,
-              parents: {
-                include: {
-                  parent: {
-                    include: {
-                      user: true
-                    }
-                  }
-                }
-              }
+              parents: true
             }
           },
           teacher: {
             include: {
               subjects: true,
               classes: true
-            }
-          },
-          parent: {
-            include: {
-              children: {
-                include: {
-                  student: {
-                    include: {
-                      user: true
-                    }
-                  }
-                }
-              }
             }
           }
         }
@@ -177,15 +156,7 @@ export const getUserById = async (id: string): Promise<any> => {
         student: {
           include: {
             class: true,
-            parents: {
-              include: {
-                parent: {
-                  include: {
-                    user: true
-                  }
-                }
-              }
-            },
+            parents: true,
             grades: {
               take: 10,
               orderBy: { date: 'desc' }
@@ -208,16 +179,7 @@ export const getUserById = async (id: string): Promise<any> => {
         },
         parent: {
           include: {
-            children: {
-              include: {
-                student: {
-                  include: {
-                    user: true,
-                    class: true
-                  }
-                }
-              }
-            }
+            children: true
           }
         }
       }
@@ -262,7 +224,7 @@ export const createUser = async (userData: CreateUserRequest): Promise<any> => {
 
       // Créer les données spécifiques selon le rôle
       switch (userData.role) {
-        case 'student':
+        case 'STUDENT':
           if (userData.studentData) {
             await tx.student.create({
               data: {
@@ -288,7 +250,7 @@ export const createUser = async (userData: CreateUserRequest): Promise<any> => {
           }
           break;
 
-        case 'teacher':
+        case 'TEACHER':
           if (userData.teacherData) {
             await tx.teacher.create({
               data: {
@@ -302,7 +264,7 @@ export const createUser = async (userData: CreateUserRequest): Promise<any> => {
           }
           break;
 
-        case 'parent':
+        case 'PARENT':
           if (userData.parentData) {
             await tx.parent.create({
               data: {
@@ -377,7 +339,7 @@ export const updateUser = async (id: string, userData: UpdateUserRequest): Promi
       });
 
       // Mettre à jour les données spécifiques selon le rôle
-      if (existingUser.role === 'student' && userData.studentData) {
+      if (existingUser.role === 'STUDENT' && userData.studentData) {
         await tx.student.update({
           where: { userId: id },
           data: {
@@ -387,7 +349,7 @@ export const updateUser = async (id: string, userData: UpdateUserRequest): Promi
         });
       }
 
-      if (existingUser.role === 'teacher' && userData.teacherData) {
+      if (existingUser.role === 'TEACHER' && userData.teacherData) {
         await tx.teacher.update({
           where: { userId: id },
           data: {
@@ -397,7 +359,7 @@ export const updateUser = async (id: string, userData: UpdateUserRequest): Promi
         });
       }
 
-      if (existingUser.role === 'parent' && userData.parentData) {
+      if (existingUser.role === 'PARENT' && userData.parentData) {
         await tx.parent.update({
           where: { userId: id },
           data: {
@@ -492,10 +454,10 @@ export const getUserStats = async (): Promise<UserStats> => {
       newUsersThisMonth
     ] = await Promise.all([
       prisma.user.count(),
-      prisma.user.count({ where: { role: 'student' } }),
-      prisma.user.count({ where: { role: 'teacher' } }),
-      prisma.user.count({ where: { role: 'parent' } }),
-      prisma.user.count({ where: { role: 'admin' } }),
+      prisma.user.count({ where: { role: 'STUDENT' } }),
+      prisma.user.count({ where: { role: 'TEACHER' } }),
+      prisma.user.count({ where: { role: 'PARENT' } }),
+      prisma.user.count({ where: { role: 'ADMIN' } }),
       prisma.user.count({ where: { isActive: true } }),
       prisma.user.count({ where: { isActive: false } }),
       prisma.user.count({

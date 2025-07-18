@@ -18,7 +18,9 @@ import {
 // Composants fallback pour les modules non implémentés
 import { ComingSoon } from '../components/Fallback/ComingSoon';
 import { MessageList } from '../components/Messages/MessageList';
-import { StudentManagement } from '../components/Students/StudentManagement';
+import { UserManagement } from '../components/Admin/UserManagement';
+import { AdmissionManagement } from '../components/Admissions/AdmissionManagement';
+import { FinanceManagement } from '../components/Finance/FinanceManagement';
 
 // Création des composants fallback pour le router
 const MessageComingSoon = () => <ComingSoon moduleName="Système de Messagerie" expectedPhase={7} />;
@@ -81,7 +83,7 @@ const router = createBrowserRouter([
             <ErrorBoundary>
               <Suspense fallback={<PageLoading />}>
                 <div className="p-6">
-                  <StudentManagement />
+                  <UserManagement />
                 </div>
               </Suspense>
             </ErrorBoundary>
@@ -109,14 +111,13 @@ const router = createBrowserRouter([
         path: '/admin/finance',
         element: (
           <ProtectedRoute allowedRoles={['admin']}>
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-4">Gestion financière</h1>
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-gray-600 dark:text-gray-400">
-                  Module de gestion financière - À implémenter en Phase 8
-                </p>
-              </div>
-            </div>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoading />}>
+                <div className="p-6">
+                  <FinanceManagement />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
           </ProtectedRoute>
         )
       },
@@ -126,6 +127,20 @@ const router = createBrowserRouter([
           <ProtectedRoute allowedRoles={['admin']}>
             <ErrorBoundary>
               <ReportsComingSoon />
+            </ErrorBoundary>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/admin/admissions',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoading />}>
+                <div className="p-6">
+                  <AdmissionManagement />
+                </div>
+              </Suspense>
             </ErrorBoundary>
           </ProtectedRoute>
         )

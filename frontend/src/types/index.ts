@@ -132,3 +132,8 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export type { FinancialRecord } from './FinancialRecord';
+// À décommenter quand FinancialRecord sera défini
+
+export type { AdmissionApplication } from './AdmissionApplication';

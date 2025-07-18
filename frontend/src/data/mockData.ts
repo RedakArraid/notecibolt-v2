@@ -202,6 +202,35 @@ export const achievements = [
   }
 ];
 
+export const financialRecords = [
+  {
+    id: 'fin-1',
+    studentId: '1',
+    type: 'tuition',
+    amount: 600000,
+    currency: 'FCFA',
+    dueDate: '2025-02-01',
+    status: 'pending',
+    description: 'Frais de scolarité - Trimestre 2',
+    invoiceNumber: 'INV-2025-001',
+    createdAt: '2025-01-01T00:00:00Z'
+  },
+  {
+    id: 'fin-2',
+    studentId: '1',
+    type: 'materials',
+    amount: 42750,
+    currency: 'FCFA',
+    dueDate: '2025-01-20',
+    paidDate: '2025-01-18',
+    status: 'paid',
+    description: 'Manuels scolaires - Mathématiques',
+    paymentMethod: 'card',
+    invoiceNumber: 'INV-2025-002',
+    createdAt: '2025-01-10T00:00:00Z'
+  }
+];
+
 // ===========================
 // DONNÉES POUR GESTION DES UTILISATEURS (Ajoutées de la v1)
 // ===========================
