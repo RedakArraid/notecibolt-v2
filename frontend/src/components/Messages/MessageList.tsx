@@ -35,8 +35,18 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [showComposeModal, setShowComposeModal] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'announcements'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const { addNotification, markMessageAsRead, isMessageRead } = useAppStore();
+
+  // Charger le compteur global au démarrage et après lecture
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const count = await messagesService.getUnreadCount();
+      setUnreadCount(count);
+    };
+    fetchUnread();
+  }, []);
 
   // Charger les messages au démarrage
   useEffect(() => {
@@ -86,6 +96,10 @@ export const MessageList: React.FC<MessageListProps> = ({
       
       // Envoyer la mise à jour à l'API en arrière-plan
       await messagesService.markAsRead(messageId);
+      
+      // Rafraîchir le compteur global après lecture
+      const count = await messagesService.getUnreadCount();
+      setUnreadCount(count);
       
     } catch (err) {
       console.warn('Erreur lors de la synchronisation avec l\'API:', err);
@@ -164,8 +178,6 @@ export const MessageList: React.FC<MessageListProps> = ({
         !message.senderName.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
-
-  const unreadCount = messages.filter(m => !(m.read || isMessageRead(m.id))).length;
 
   if (loading) {
     return (
@@ -342,23 +354,51 @@ export const MessageList: React.FC<MessageListProps> = ({
 // Composant modal pour composer un message
 interface ComposeMessageModalProps {
   onClose: () => void;
-  onSend: (recipient: string, content: string, type?: 'message' | 'announcement') => void;
+  onSend: (payload: any, content: string, type?: 'message' | 'announcement') => void;
 }
+
+const ROLE_OPTIONS = [
+  { value: 'STUDENT', label: 'Tous les élèves' },
+  { value: 'PARENT', label: 'Tous les parents' },
+  { value: 'TEACHER', label: 'Tous les enseignants' },
+  { value: 'ADMIN', label: 'Tous les administrateurs' },
+];
 
 const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({ onClose, onSend }) => {
   const [recipient, setRecipient] = useState('');
+  const [recipients, setRecipients] = useState<string[]>([]);
+  const [role, setRole] = useState('STUDENT');
   const [content, setContent] = useState('');
   const [type, setType] = useState<'message' | 'announcement'>('message');
   const [sending, setSending] = useState(false);
+  const [contacts, setContacts] = useState<{ id: string; name: string; role: string; email: string }[]>([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (type === 'message') {
+      messagesService.getContacts(search).then(setContacts);
+    }
+  }, [type, search]);
 
   const handleSend = async () => {
-    if (!recipient.trim() || !content.trim()) return;
-    
-    setSending(true);
-    try {
-      await onSend(recipient, content, type);
-    } finally {
-      setSending(false);
+    if (type === 'announcement') {
+      if (!content.trim() || !role) return;
+      setSending(true);
+      try {
+        await onSend({ role }, content, type);
+      } finally {
+        setSending(false);
+      }
+    } else {
+      if ((!recipient.trim() && recipients.length === 0) || !content.trim()) return;
+      setSending(true);
+      try {
+        let ids = recipients.length > 0 ? recipients : recipient ? [recipient] : [];
+        ids = ids.filter(id => typeof id === 'string' && id.length > 0);
+        await onSend({ recipientIds: ids }, content, type);
+      } finally {
+        setSending(false);
+      }
     }
   };
 
@@ -380,24 +420,11 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({ onClose, onSe
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Destinataire
-            </label>
-            <input
-              type="text"
-              value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
-              placeholder="Nom ou email du destinataire"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Type
             </label>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={e => setType(e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
             >
               <option value="message">Message privé</option>
@@ -405,13 +432,59 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({ onClose, onSe
             </select>
           </div>
 
+          {type === 'announcement' ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Rôle destinataire
+              </label>
+              <select
+                value={role}
+                onChange={e => setRole(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+              >
+                {ROLE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Destinataires
+              </label>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Rechercher un utilisateur..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 mb-2"
+              />
+              <div className="max-h-32 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-700">
+                {contacts.map(user => (
+                  <div key={user.id} className="flex items-center px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={recipients.includes(user.id)}
+                      onChange={e => {
+                        if (e.target.checked) setRecipients(prev => [...prev, user.id]);
+                        else setRecipients(prev => prev.filter(id => id !== user.id));
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-gray-900 dark:text-white">{user.name} ({user.role})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Message
             </label>
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={e => setContent(e.target.value)}
               placeholder="Tapez votre message ici..."
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 resize-none"
@@ -428,7 +501,7 @@ const ComposeMessageModal: React.FC<ComposeMessageModalProps> = ({ onClose, onSe
           </button>
           <button
             onClick={handleSend}
-            disabled={!recipient.trim() || !content.trim() || sending}
+            disabled={sending || (!content.trim()) || (type === 'announcement' ? !role : recipients.length === 0)}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg transition-colors"
           >
             {sending ? <LoadingSpinner size="sm" /> : <Send className="w-4 h-4" />}

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 
 // Extension de l'interface Request pour TypeScript
 declare global {
@@ -15,6 +16,7 @@ declare global {
 }
 
 const router = Router();
+const prisma = new PrismaClient();
 
 // Mock data pour les messages
 const mockMessages = [
@@ -37,7 +39,7 @@ const mockMessages = [
     content: 'Les notes du contrôle de mathématiques sont disponibles. Moyenne de classe: 14.2/20',
     type: 'message',
     timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    read: true,
+    read: false, // <-- forcer non lu
     recipientId: 'current-user'
   },
   {
@@ -114,142 +116,110 @@ const mockContacts = [
 ];
 
 // GET /api/v1/messages/recent - Obtenir les messages récents
-router.get('/recent', (req: Request, res: Response) => {
+router.get('/recent', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 10;
     const userId = req.user?.id;
-    
-    console.log(`📬 Fetching ${limit} recent messages for user ${userId}`);
-    
-    // Filtrer et limiter les messages
-    const recentMessages = mockMessages
-      .filter(msg => msg.recipientId === 'current-user') // En production: msg.recipientId === userId
-      .slice(0, limit)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-    
-    res.json({
-      success: true,
-      data: recentMessages,
-      count: recentMessages.length,
-      timestamp: new Date().toISOString()
+    if (!userId) return res.status(401).json({ success: false, message: 'Non authentifié' });
+    const messages = await prisma.message.findMany({
+      where: {
+        recipients: { some: { id: userId } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
     });
+    res.json({ success: true, data: messages, count: messages.length, timestamp: new Date().toISOString() });
   } catch (error: any) {
-    console.error('❌ Error fetching recent messages:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors du chargement des messages récents',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erreur chargement messages récents', error: error.message });
   }
 });
 
-// POST /api/v1/messages/send - Envoyer un message
-router.post('/send', (req: Request, res: Response) => {
+// POST /api/v1/messages/send - Envoyer un message (privé, multiple ou annonce)
+router.post('/send', async (req: Request, res: Response) => {
   try {
-    const { recipientId, content, type = 'message' } = req.body;
+    const { recipientId, recipientIds, role, content, type = 'message', subject = '' } = req.body;
     const senderId = req.user?.id;
-    const senderName = req.user?.name || 'Utilisateur';
-    const senderRole = req.user?.role || 'Utilisateur';
-    
-    console.log(`📤 Sending message from ${senderName} to ${recipientId}`);
-    
-    if (!recipientId || !content) {
-      return res.status(400).json({
-        success: false,
-        message: 'Destinataire et contenu requis'
-      });
+    if (!senderId || !content) {
+      return res.status(400).json({ success: false, message: 'Expéditeur et contenu requis' });
     }
-    
-    // Créer le nouveau message
-    const newMessage = {
-      id: Date.now().toString(),
-      senderName,
-      senderRole,
-      senderId: senderId || '',
-      content,
-      type,
-      timestamp: new Date().toISOString(),
-      read: false,
-      recipientId
-    };
-    
-    // Ajouter à la liste (en production: sauvegarder en base)
-    mockMessages.unshift(newMessage);
-    
-    res.status(201).json({
-      success: true,
-      data: newMessage,
-      message: 'Message envoyé avec succès'
-    });
+    // Vérifier que le senderId existe dans la table User
+    const senderExists = await prisma.user.findUnique({ where: { id: senderId } });
+    if (!senderExists) {
+      return res.status(400).json({ success: false, message: 'L\'expéditeur (utilisateur connecté) n\'existe pas dans la base.' });
+    }
+    let targetUserIds: string[] = [];
+    // Gestion des annonces par rôle
+    if (type === 'ANNOUNCEMENT' && role) {
+      const validRoles = ['STUDENT', 'PARENT', 'TEACHER', 'ADMIN'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ success: false, message: 'Rôle inconnu' });
+      }
+      // Récupérer tous les utilisateurs du rôle demandé (y compris ADMIN)
+      const users = await prisma.user.findMany({ where: { role }, select: { id: true } });
+      console.log('users trouvés pour le rôle', role, users);
+      users.forEach(u => console.log('Type de u.id:', typeof u.id, u.id));
+      targetUserIds = users.map(u => u.id).filter(id => typeof id === 'string' && id.length > 0);
+      console.log('targetUserIds (IDs)', targetUserIds);
+    } else if (Array.isArray(recipientIds) && recipientIds.length > 0) {
+      targetUserIds = recipientIds.filter(id => typeof id === 'string' && id.length > 0);
+    } else if (recipientId) {
+      targetUserIds = [recipientId];
+    } else {
+      return res.status(400).json({ success: false, message: 'Aucun destinataire spécifié' });
+    }
+    if (targetUserIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Aucun destinataire valide' });
+    }
+    // Création d'un message pour chaque destinataire (pour gestion individuelle du "lu")
+    const createdMessages = await Promise.all(targetUserIds.map(async (userId) => {
+      return prisma.message.create({
+        data: {
+          senderId,
+          recipients: { connect: [{ id: userId }] },
+          subject,
+          content,
+          type,
+          read: false
+        }
+      });
+    }));
+    res.status(201).json({ success: true, data: createdMessages, message: 'Message(s) envoyé(s) avec succès' });
   } catch (error: any) {
-    console.error('❌ Error sending message:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors de l\'envoi du message',
-      error: error.message
-    });
+    console.error('Erreur lors de l\'envoi du message:', error.message, error.stack);
+    res.status(500).json({ success: false, message: 'Erreur lors de l\'envoi du message', error: error.message });
   }
 });
 
 // PATCH /api/v1/messages/:id/read - Marquer un message comme lu
-router.patch('/:id/read', (req: Request, res: Response) => {
+router.patch('/:id/read', async (req: Request, res: Response) => {
   try {
     const messageId = req.params.id;
     const userId = req.user?.id;
-    
-    console.log(`📖 Marking message ${messageId} as read for user ${userId}`);
-    
-    // Trouver et marquer le message comme lu
-    const messageIndex = mockMessages.findIndex(msg => 
-      msg.id === messageId && msg.recipientId === 'current-user'
-    );
-    
-    if (messageIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: 'Message non trouvé'
-      });
-    }
-    
-    mockMessages[messageIndex].read = true;
-    
-    res.json({
-      success: true,
-      message: 'Message marqué comme lu',
-      data: mockMessages[messageIndex]
+    if (!userId) return res.status(401).json({ success: false, message: 'Non authentifié' });
+    const message = await prisma.message.update({
+      where: { id: messageId },
+      data: { read: true }
     });
+    res.json({ success: true, message: 'Message marqué comme lu', data: message });
   } catch (error: any) {
-    console.error('❌ Error marking message as read:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors du marquage du message',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erreur lors du marquage du message', error: error.message });
   }
 });
 
 // GET /api/v1/messages/unread-count - Obtenir le nombre de messages non lus
-router.get('/unread-count', (req: Request, res: Response) => {
+router.get('/unread-count', async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
-    const unreadCount = mockMessages.filter(msg => 
-      msg.recipientId === 'current-user' && !msg.read
-    ).length;
-    
-    console.log(`📊 Unread messages count for user ${userId}: ${unreadCount}`);
-    
-    res.json({
-      success: true,
-      data: { count: unreadCount }
+    if (!userId) return res.status(401).json({ success: false, message: 'Non authentifié' });
+    const count = await prisma.message.count({
+      where: {
+        recipients: { some: { id: userId } },
+        read: false
+      }
     });
+    res.json({ success: true, data: { count } });
   } catch (error: any) {
-    console.error('❌ Error getting unread count:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur lors du comptage des messages non lus',
-      error: error.message
-    });
+    res.status(500).json({ success: false, message: 'Erreur lors du comptage des messages non lus', error: error.message });
   }
 });
 

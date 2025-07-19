@@ -19,8 +19,10 @@ import {
 import { ComingSoon } from '../components/Fallback/ComingSoon';
 import { MessageList } from '../components/Messages/MessageList';
 import { UserManagement } from '../components/Admin/UserManagement';
-import { AdmissionManagement } from '../components/Admissions/AdmissionManagement';
+import { EnhancedAdmissionManagement } from '../components/Admissions/EnhancedAdmissionManagement';
 import { FinanceManagement } from '../components/Finance/FinanceManagement';
+import { AdminSettings } from '../components/Admin/AdminSettings';
+import { ScheduleManagement } from '../components/Schedule/ScheduleManagement';
 
 // Création des composants fallback pour le router
 const MessageComingSoon = () => <ComingSoon moduleName="Système de Messagerie" expectedPhase={7} />;
@@ -138,7 +140,35 @@ const router = createBrowserRouter([
             <ErrorBoundary>
               <Suspense fallback={<PageLoading />}>
                 <div className="p-6">
-                  <AdmissionManagement />
+                  <EnhancedAdmissionManagement />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/admin/settings',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoading />}>
+                <div className="p-6">
+                  <AdminSettings />
+                </div>
+              </Suspense>
+            </ErrorBoundary>
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: '/admin/schedule',
+        element: (
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ErrorBoundary>
+              <Suspense fallback={<PageLoading />}>
+                <div className="p-6">
+                  <ScheduleManagement />
                 </div>
               </Suspense>
             </ErrorBoundary>

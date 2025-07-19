@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Home,
@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store';
 import { type User } from '../../store';
+import { messagesService } from '../../services/api/messagesService';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -53,10 +54,11 @@ const getMenuItemsByRole = (role: User['role']): MenuItem[] => {
         { id: 'dashboard', label: 'Tableau de bord', icon: Home, path: '/admin' },
         { id: 'users', label: 'Gestion des utilisateurs', icon: Users, path: '/admin/students' },
         { id: 'admissions', label: 'Gestion des admissions', icon: FileText, path: '/admin/admissions' },
+        { id: 'schedule', label: 'Emploi du temps', icon: Calendar, path: '/admin/schedule' },
         { id: 'finance', label: 'Gestion financière', icon: CreditCard, path: '/admin/finance' },
         { id: 'reports', label: 'Rapports', icon: FileText, path: '/admin/reports' },
         { id: 'messages', label: 'Messages', icon: MessageSquare, path: '/messages', badge: '3' },
-        { id: 'settings', label: 'Paramètres', icon: Settings, path: '/settings' }
+        { id: 'settings', label: 'Paramètres', icon: Settings, path: '/admin/settings' }
       ];
 
     case 'teacher':
@@ -119,7 +121,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const location = useLocation();
   const { user, logout } = useAuthStore();
-  const menuItems = getMenuItemsByRole(userRole);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const count = await messagesService.getUnreadCount();
+      setUnreadMessages(count);
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+  const menuItems = getMenuItemsByRole(userRole).map(item =>
+    item.id === 'messages'
+      ? { ...item, badge: unreadMessages > 0 ? String(unreadMessages) : undefined }
+      : item
+  );
 
   const handleLogout = () => {
     logout();

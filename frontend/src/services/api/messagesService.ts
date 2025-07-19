@@ -62,9 +62,9 @@ class MessagesService {
     }
     try {
       const url = `${this.baseUrl}/recent${buildQueryString({ limit })}`;
-      const messages = await apiService.get(url);
-      globalCache.set(cacheKey, messages, 2 * 60 * 1000); // Cache 2 minutes
-      return messages;
+      const res = await apiService.get(url);
+      globalCache.set(cacheKey, res.data, 2 * 60 * 1000); // Cache 2 minutes
+      return res.data;
     } catch (error) {
       console.error('Erreur lors du chargement des messages récents:', error);
       throw error;
@@ -104,13 +104,9 @@ class MessagesService {
   async markAsRead(messageId: string): Promise<void> {
     try {
       await apiService.put(`${this.baseUrl}/${messageId}/read`, {});
-      
-      // Invalider les caches pour forcer le rechargement
       this.invalidateMessageCaches();
-      
-      // Mettre à jour le cache local si possible
+      globalCache.delete(`${this.cachePrefix}-unread-count`);
       this.updateMessageInCache(messageId, { read: true });
-      
     } catch (error) {
       console.error('Erreur lors du marquage du message comme lu:', error);
       throw error;
@@ -144,7 +140,8 @@ class MessagesService {
       return cached;
     }
     try {
-      const count = await apiService.get(`${this.baseUrl}/unread-count`);
+      const res = await apiService.get(`${this.baseUrl}/unread-count`);
+      const count = res.data?.count ?? 0;
       globalCache.set(cacheKey, count, 1 * 60 * 1000); // Cache 1 minute
       return count;
     } catch (error) {
@@ -168,7 +165,8 @@ class MessagesService {
     }
     try {
       const url = `${this.baseUrl}/contacts${buildQueryString(search ? { search } : {})}`;
-      const contacts = await apiService.get(url);
+      const res = await apiService.get(url);
+      const contacts = Array.isArray(res) ? res : res.data;
       globalCache.set(cacheKey, contacts, 10 * 60 * 1000); // Cache 10 minutes
       return contacts;
     } catch (error) {

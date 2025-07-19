@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, MessageSquare, Settings, Sun, Moon, Menu, LogOut, User, ChevronDown } from 'lucide-react';
 import { useAuthStore, useAppStore } from '../../store';
 import { useNavigation } from '../../router/ProtectedRoute';
+import { messagesService } from '../../services/api/messagesService';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -13,8 +14,19 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { theme, toggleTheme } = useAppStore();
   const { pageTitle } = useNavigation();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
-  const unreadMessages = 3; // Temporaire, sera remplacé par les données API
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const count = await messagesService.getUnreadCount();
+      setUnreadMessages(count);
+    };
+    fetchUnread();
+    // Optionnel : polling pour mise à jour auto
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const unreadNotifications = 2; // Temporaire
 
   const handleLogout = () => {

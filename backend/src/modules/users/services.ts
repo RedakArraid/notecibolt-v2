@@ -218,7 +218,8 @@ export const createUser = async (userData: CreateUserRequest): Promise<any> => {
           address: userData.address,
           dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth) : null,
           isActive: userData.isActive ?? true,
-          lastLoginAt: null
+          lastLoginAt: null,
+          password: userData.password
         }
       });
 

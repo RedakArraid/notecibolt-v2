@@ -301,7 +301,6 @@ model Message {
   id            String      @id @default(cuid())
   senderId      String
   sender        User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
-  recipientIds  String[]
   recipients    User[]      @relation("MessageRecipient")
   subject       String
   content       String

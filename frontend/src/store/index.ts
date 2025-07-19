@@ -137,10 +137,20 @@ export const useAppStore = create<AppState>()((
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
 
       // Theme
-      theme: 'light',
-      toggleTheme: () => set(state => ({ 
-        theme: state.theme === 'light' ? 'dark' : 'light' 
-      })),
+      theme: (typeof window !== 'undefined' && localStorage.getItem('theme')) || (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+      toggleTheme: () => set(state => {
+        const newTheme = state.theme === 'light' ? 'dark' : 'light';
+        if (typeof window !== 'undefined') {
+          if (newTheme === 'dark') {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+          }
+        }
+        return { theme: newTheme };
+      }),
 
       // API Status
       apiConnected: null,

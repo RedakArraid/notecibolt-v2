@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Users, BookOpen, FileText, Calendar, Save, X, AlertCircle, Upload, Trash2, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Users, BookOpen, FileText, Calendar, Save, X, AlertCircle, Upload, Trash2, Eye, CheckCircle } from 'lucide-react';
 
 interface StudentInfo {
   firstName: string;
@@ -68,13 +68,15 @@ interface CandidatureFormProps {
   onClose: () => void;
   onSubmit: (data: CandidatureFormData) => void;
   prospectData?: any;
+  initialData?: any;
 }
 
 export const CandidatureForm: React.FC<CandidatureFormProps> = ({ 
   isOpen, 
   onClose, 
   onSubmit,
-  prospectData 
+  prospectData,
+  initialData
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<CandidatureFormData>({
@@ -113,11 +115,11 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
       extracurricularActivities: ''
     },
     documents: [
-      { id: 'birth-certificate', name: 'Extrait de naissance', type: 'application/pdf', size: 0, required: true },
-      { id: 'family-book', name: 'Livret de famille', type: 'application/pdf', size: 0, required: true },
-      { id: 'school-report', name: 'Bulletins scolaires', type: 'application/pdf', size: 0, required: true },
-      { id: 'medical-certificate', name: 'Certificat médical', type: 'application/pdf', size: 0, required: true },
-      { id: 'photos', name: 'Photos d\'identité', type: 'image/*', size: 0, required: true },
+      { id: 'birth-certificate', name: 'Extrait de naissance', type: 'application/pdf', size: 0, required: false },
+      { id: 'family-book', name: 'Livret de famille', type: 'application/pdf', size: 0, required: false },
+      { id: 'school-report', name: 'Bulletins scolaires', type: 'application/pdf', size: 0, required: false },
+      { id: 'medical-certificate', name: 'Certificat médical', type: 'application/pdf', size: 0, required: false },
+      { id: 'photos', name: 'Photos d\'identité', type: 'image/*', size: 0, required: false },
       { id: 'vaccination', name: 'Carnet de vaccination', type: 'application/pdf', size: 0, required: false }
     ],
     hasGuardian: false
@@ -147,11 +149,13 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
 
       case 2:
         if (!formData.parentInfo.father.name.trim()) newErrors.fatherName = 'Nom du père requis';
-        if (!formData.parentInfo.father.email.trim()) newErrors.fatherEmail = 'Email du père requis';
-        if (!formData.parentInfo.father.phone.trim()) newErrors.fatherPhone = 'Téléphone du père requis';
         if (!formData.parentInfo.mother.name.trim()) newErrors.motherName = 'Nom de la mère requis';
-        if (!formData.parentInfo.mother.email.trim()) newErrors.motherEmail = 'Email de la mère requis';
-        if (!formData.parentInfo.mother.phone.trim()) newErrors.motherPhone = 'Téléphone de la mère requis';
+        // Les emails et téléphones ne sont plus requis
+        // Champs du tuteur légal (si activé)
+        if (formData.hasGuardian && formData.parentInfo.guardian) {
+          if (!formData.parentInfo.guardian.name?.trim()) newErrors.guardianName = 'Nom du tuteur requis';
+          // Les autres champs du tuteur sont facultatifs
+        }
         break;
 
       case 3:
@@ -219,6 +223,65 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
       setIsSubmitting(false);
     }
   };
+
+  // Pré-remplissage lors de l'édition
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        studentInfo: {
+          firstName: initialData.firstName || '',
+          lastName: initialData.lastName || '',
+          dateOfBirth: initialData.dateOfBirth ? initialData.dateOfBirth.slice(0, 10) : '',
+          gender: (initialData.gender || 'male').toLowerCase(),
+          nationality: initialData.nationality || '',
+          previousSchool: initialData.previousSchool || '',
+          previousClass: '',
+          medicalInfo: '',
+          specialNeeds: initialData.specialNeeds || ''
+        },
+        parentInfo: {
+          father: {
+            name: initialData.fatherName || '',
+            email: initialData.fatherEmail || '',
+            phone: initialData.fatherPhone || '',
+            occupation: initialData.fatherOccupation || '',
+            address: initialData.familyAddress || ''
+          },
+          mother: {
+            name: initialData.motherName || '',
+            email: initialData.motherEmail || '',
+            phone: initialData.motherPhone || '',
+            occupation: initialData.motherOccupation || '',
+            address: initialData.familyAddress || ''
+          },
+          guardian: initialData.guardianName ? {
+            name: initialData.guardianName,
+            email: initialData.guardianEmail || '',
+            phone: initialData.guardianPhone || '',
+            occupation: '',
+            address: initialData.familyAddress || '',
+            relationship: ''
+          } : undefined
+        },
+        academicInfo: {
+          desiredClass: initialData.desiredClass || '',
+          academicYear: initialData.academicYear || '',
+          previousGrades: '',
+          motivationLetter: initialData.notes || '',
+          extracurricularActivities: ''
+        },
+        documents: [
+          { id: 'birth-certificate', name: 'Extrait de naissance', type: 'application/pdf', size: 0, required: false },
+          { id: 'family-book', name: 'Livret de famille', type: 'application/pdf', size: 0, required: false },
+          { id: 'school-report', name: 'Bulletins scolaires', type: 'application/pdf', size: 0, required: false },
+          { id: 'medical-certificate', name: 'Certificat médical', type: 'application/pdf', size: 0, required: false },
+          { id: 'photos', name: 'Photos d\'identité', type: 'image/*', size: 0, required: false },
+          { id: 'vaccination', name: 'Carnet de vaccination', type: 'application/pdf', size: 0, required: false }
+        ],
+        hasGuardian: !!initialData.guardianName
+      });
+    }
+  }, [initialData]);
 
   if (!isOpen) return null;
 
@@ -416,7 +479,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Email *
+                    Email
                   </label>
                   <input
                     type="email"
@@ -439,7 +502,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Téléphone *
+                    Téléphone
                   </label>
                   <input
                     type="tel"
@@ -527,7 +590,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Email *
+                    Email
                   </label>
                   <input
                     type="email"
@@ -550,7 +613,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Téléphone *
+                    Téléphone
                   </label>
                   <input
                     type="tel"
@@ -629,7 +692,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Nom complet
+                        Nom complet *
                       </label>
                       <input
                         type="text"
@@ -638,7 +701,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
                           ...prev,
                           parentInfo: {
                             ...prev.parentInfo,
-                            guardian: { 
+                            guardian: {
                               ...prev.parentInfo.guardian,
                               name: e.target.value,
                               email: prev.parentInfo.guardian?.email || '',
@@ -649,10 +712,14 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
                             }
                           }
                         }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                          errors.guardianName ? 'border-red-300' : 'border-gray-300 dark:border-gray-600'
+                        }`}
                       />
+                      {errors.guardianName && (
+                        <p className="mt-1 text-sm text-red-600">{errors.guardianName}</p>
+                      )}
                     </div>
-
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Lien de parenté
@@ -664,7 +731,7 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
                           ...prev,
                           parentInfo: {
                             ...prev.parentInfo,
-                            guardian: { 
+                            guardian: {
                               ...prev.parentInfo.guardian,
                               relationship: e.target.value,
                               name: prev.parentInfo.guardian?.name || '',
@@ -677,6 +744,106 @@ export const CandidatureForm: React.FC<CandidatureFormProps> = ({
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         placeholder="Ex: Grand-père, Oncle, etc."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.parentInfo.guardian?.email || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            guardian: {
+                              ...prev.parentInfo.guardian,
+                              email: e.target.value,
+                              name: prev.parentInfo.guardian?.name || '',
+                              phone: prev.parentInfo.guardian?.phone || '',
+                              occupation: prev.parentInfo.guardian?.occupation || '',
+                              address: prev.parentInfo.guardian?.address || '',
+                              relationship: prev.parentInfo.guardian?.relationship || ''
+                            }
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Téléphone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.parentInfo.guardian?.phone || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            guardian: {
+                              ...prev.parentInfo.guardian,
+                              phone: e.target.value,
+                              name: prev.parentInfo.guardian?.name || '',
+                              email: prev.parentInfo.guardian?.email || '',
+                              occupation: prev.parentInfo.guardian?.occupation || '',
+                              address: prev.parentInfo.guardian?.address || '',
+                              relationship: prev.parentInfo.guardian?.relationship || ''
+                            }
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Profession
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.parentInfo.guardian?.occupation || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            guardian: {
+                              ...prev.parentInfo.guardian,
+                              occupation: e.target.value,
+                              name: prev.parentInfo.guardian?.name || '',
+                              email: prev.parentInfo.guardian?.email || '',
+                              phone: prev.parentInfo.guardian?.phone || '',
+                              address: prev.parentInfo.guardian?.address || '',
+                              relationship: prev.parentInfo.guardian?.relationship || ''
+                            }
+                          }
+                        }))}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Adresse
+                      </label>
+                      <textarea
+                        value={formData.parentInfo.guardian?.address || ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          parentInfo: {
+                            ...prev.parentInfo,
+                            guardian: {
+                              ...prev.parentInfo.guardian,
+                              address: e.target.value,
+                              name: prev.parentInfo.guardian?.name || '',
+                              email: prev.parentInfo.guardian?.email || '',
+                              phone: prev.parentInfo.guardian?.phone || '',
+                              occupation: prev.parentInfo.guardian?.occupation || '',
+                              relationship: prev.parentInfo.guardian?.relationship || ''
+                            }
+                          }
+                        }))}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
